@@ -33,12 +33,12 @@ jobs:
       - name: Build (Windows GUI)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --onefile --noconsole --name JiraReminder --icon app.ico jira_reminder.py
+          pyinstaller --onefile --noconsole --name JiraReminder --icon app.ico pyJIRAReminder.py
 
       - name: Build (Linux)
         if: runner.os != 'Windows'
         run: |
-          pyinstaller --onefile --name JiraReminder jira_reminder.py
+          pyinstaller --onefile --name JiraReminder pyJIRAReminder.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
