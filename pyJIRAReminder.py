@@ -12,6 +12,7 @@ Jira Reminder — PyQt6 tray app (updated)
 - --logging : увімкнути DEBUG-лог у консоль (якщо термінал є) і у файл поряд з config.enc
 """
 
+from tkinter import font
 import sys, os, json, uuid, platform, getpass, pathlib, argparse, logging
 from datetime import datetime, time as dtime
 from urllib.parse import quote_plus
@@ -23,6 +24,17 @@ from PyQt6 import QtWidgets, QtGui, QtCore
 
 APP_NAME = "Jira Reminder"
 __version__ = "1.0.1-rc"
+
+# --- UI scaling & metrics ---
+UI_SCALE = 1.0
+def S(px: float) -> int: return int(round(px * UI_SCALE))
+
+BLOCK_WIDTH_PX  = lambda: S(450)   # було 350
+CARD_HEIGHT_PX  = lambda: S(150)   # трошки більше простору під summary
+GAP_PX          = lambda: S(12)
+HEADER_H_PX     = lambda: S(24)
+SHOW_MORE_H_PX  = lambda: S(28)
+BLOCK_HEIGHT_PX = lambda: HEADER_H_PX() + GAP_PX() + (CARD_HEIGHT_PX()*2) + GAP_PX() + SHOW_MORE_H_PX()
 
 # -------------------------- Paths & logging --------------------------
 
@@ -191,7 +203,7 @@ class JiraClient:
         payload = {
             "jql": jql,
             "maxResults": max_results,
-            "fields": ["summary", "duedate", "issuetype", "assignee", "project"]
+            "fields": ["summary", "duedate", "issuetype", "assignee", "project", "priority", "status"]
         }
         log.debug("POST %s", url); log.debug("JQL: %s", jql)
         try:
@@ -230,6 +242,8 @@ class JiraClient:
                 "duedate": f.get("duedate"),
                 "issuetype": (f.get("issuetype") or {}).get("name"),
                 "project": (f.get("project") or {}).get("key"),
+                "priority": (f.get("priority") or {}).get("name"),
+                "status": (f.get("status") or {}).get("name"),
             })
         # формуємо URL пізніше в UI, щоб не дублювати
         return parsed
@@ -241,69 +255,256 @@ class JiraClient:
         return f"{self.base}/issues/?jql={quote_plus(jql)}"
 
 # -------------------------- UI --------------------------
+class IssueCard(QtWidgets.QFrame):
+    clicked = QtCore.pyqtSignal(str)  # url
 
-class IssuesList(QtWidgets.QWidget):
+    def __init__(self, issue: dict, url_builder, parent=None):
+        super().__init__(parent)
+        self.setObjectName("Card")
+        self.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
+
+        # Soft shadow
+        shadow = QtWidgets.QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(22)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QtGui.QColor(0, 0, 0, 140))
+        self.setGraphicsEffect(shadow)
+
+        self.issue = issue
+        self.url = url_builder(issue["key"])
+
+        # --- Top row: KEY + due pill
+        key_lbl = QtWidgets.QLabel(f"<b>{issue['key']}</b>")
+        key_lbl.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        key_lbl.setToolTip(issue.get("summary") or "")
+
+        summary = QtWidgets.QLabel(issue.get("summary") or "(no summary)")
+        summary.setWordWrap(True)
+        summary.setObjectName("Summary")
+        summary.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                              QtWidgets.QSizePolicy.Policy.Preferred)
+
+        due = issue.get("duedate")
+        due_lbl = QtWidgets.QLabel(self._due_text(due))
+        due_state = self._due_state(due)
+        due_lbl.setObjectName("DuePill")
+        due_lbl.setProperty("state", due_state)
+
+        top = QtWidgets.QHBoxLayout()
+        top.addWidget(key_lbl)
+        top.addStretch(1)
+        top.addWidget(due_lbl)
+
+        # --- Badges: issuetype, project, priority, status
+        itype = issue.get("issuetype") or "Issue"
+        prio  = (issue.get("priority") or "").strip() or "—"
+        stat  = (issue.get("status") or "").strip() or "—"
+
+        badges = FlowLayout(hspacing=S(6), vspacing=S(6))
+
+        def _badge(text, objname, **props):
+            lbl = QtWidgets.QLabel(text)
+            lbl.setObjectName(objname)
+            lbl.setProperty("badge", True)
+            for k, v in props.items():
+                lbl.setProperty(k, v)
+            return lbl
+        # for text, objname in ((itype, "TypeBadge"), (proj, "ProjBadge")):
+        #     b = QtWidgets.QLabel(text); b.setObjectName(objname); b.setProperty("badge", True)
+        #     badges.addWidget(b)
+
+        # prio_badge = QtWidgets.QLabel(f"Priority: {prio}")
+        # prio_badge.setObjectName("PriorityBadge")
+        # prio_badge.setProperty("badge", True)
+        # prio_badge.setProperty("level", prio)
+        # badges.addWidget(prio_badge)
+
+        # status_badge = QtWidgets.QLabel(f"Status: {stat}")
+        # status_badge.setObjectName("StatusBadge")
+        # status_badge.setProperty("badge", True)
+        # status_badge.setProperty("state", self._status_state(stat))
+        # badges.addWidget(status_badge)
+
+        
+
+        # badges.addWidget(_badge(itype, "TypeBadge"))
+        
+        # prio_badge = _badge(f"Priority: {prio}", "PriorityBadge", "level", prio)
+        # badges.addWidget(prio_badge)
+
+        # status_badge = _badge(f"Status: {stat}", "StatusBadge", "state", self._status_state(stat))
+        # badges.addWidget(status_badge)
+
+        badges.addWidget(_badge(itype, "TypeBadge"))
+        badges.addWidget(_badge(f"Priority: {prio}", "PriorityBadge", level=prio))
+        badges.addWidget(_badge(f"Status: {stat}", "StatusBadge", state=self._status_state(stat)))
+
+
+        badges.addItem(QtWidgets.QSpacerItem(
+            0, 0,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Minimum
+        ))
+
+        # --- Actions
+        btn_open = QtWidgets.QPushButton("Open")
+        btn_open.clicked.connect(lambda: self.clicked.emit(self.url))
+        actions = QtWidgets.QHBoxLayout()
+        actions.addStretch(1)
+        actions.addWidget(btn_open)
+
+        # --- Compose
+        lay = QtWidgets.QVBoxLayout(self)
+        lay.setContentsMargins(14, 12, 14, 12)
+        lay.setSpacing(8)
+        lay.addLayout(top)
+        lay.addWidget(summary)
+        lay.addLayout(badges)
+        lay.addLayout(actions)
+
+        # state hint for CSS border color
+        self.setProperty("state", due_state)
+
+        # ensure card grows to width, fixed height is set by parent list
+        sp = self.sizePolicy()
+        sp.setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Expanding)
+        sp.setVerticalPolicy(QtWidgets.QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(sp)
+        # (height is set by IssuesCardList via setFixedHeight(CARD_HEIGHT_PX()))
+
+
+    def mousePressEvent(self, e: QtGui.QMouseEvent) -> None:
+        if e.button() == QtCore.Qt.MouseButton.LeftButton:
+            self.clicked.emit(self.url)
+        super().mousePressEvent(e)
+
+    # -------- helpers
+    def _due_text(self, iso: str | None) -> str:
+        if not iso:
+            return "No due"
+        return f"Due {iso}"
+
+    def _due_state(self, iso: str | None) -> str:
+        if not iso:
+            return "none"
+        from datetime import datetime, date, timedelta
+        try:
+            d = datetime.fromisoformat(iso).date()
+        except Exception:
+            return "none"
+        today = date.today()
+        if d < today:
+            return "overdue"
+        if d == today:
+            return "today"
+        if d == today + timedelta(days=1):
+            return "tomorrow"
+        return "future"
+
+    def _status_state(self, name: str) -> str:
+        n = (name or "").strip().lower()
+        if n in {"done", "resolved", "closed", "accepted"}:
+            return "done"
+        if n in {"in progress", "implementing", "in review"}:
+            return "inprogress"
+        if n in {"to do", "todo", "backlog", "open"}:
+            return "todo"
+        return "other"
+
+class IssuesCardList(QtWidgets.QWidget):
     openLink = QtCore.pyqtSignal(str)
 
     def __init__(self, title: str, parent=None):
         super().__init__(parent)
         self.label = QtWidgets.QLabel(f"<b>{title}</b>")
-        self.list = QtWidgets.QListWidget()
-        self.list.itemActivated.connect(self._activate)
+
+        self.container = QtWidgets.QWidget()
+        self.vbox = QtWidgets.QVBoxLayout(self.container)
+        self.vbox.setContentsMargins(0, 0, 0, 0)
+        self.vbox.setSpacing(GAP_PX())
+
+        self.scroll = QtWidgets.QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setWidget(self.container)
+
         self.show_more_btn = QtWidgets.QPushButton("Show more")
+        self.show_more_btn.setFixedHeight(SHOW_MORE_H_PX())
         self.show_more_btn.setVisible(False)
         self.show_more_btn.clicked.connect(self._open_more)
 
         lay = QtWidgets.QVBoxLayout(self)
+        lay.setContentsMargins(0,0,0,0)
+        lay.setSpacing(GAP_PX())
         lay.addWidget(self.label)
-        lay.addWidget(self.list)
+        lay.addWidget(self.scroll)
         lay.addWidget(self.show_more_btn, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
 
+        # <<< СЮДИ: фікс-розміри блоку і видимого вікна під 2 картки >>>
+        self.setFixedWidth(BLOCK_WIDTH_PX())
+        self.setFixedHeight(BLOCK_HEIGHT_PX())
+        self.scroll.setMinimumHeight(CARD_HEIGHT_PX()*2 + GAP_PX())
+        self.scroll.setMaximumHeight(CARD_HEIGHT_PX()*2 + GAP_PX())
+
         self._more_url = None
+        self._url_builder = None
+
+    def _clear_cards(self):
+        while self.vbox.count():
+            item = self.vbox.takeAt(0)
+            w = item.widget()
+            if w:
+                w.setParent(None)
 
     def set_issues(self, issues: list[dict], more_url: str | None, url_builder):
-        self.list.clear()
+        self._clear_cards()
         self._more_url = more_url
+        self._url_builder = url_builder
         self.show_more_btn.setVisible(bool(more_url))
-        for it in issues[:5]:
-            due_txt = f" (due {it['duedate']})" if it.get("duedate") else ""
-            txt = f"{it['key']}: {it['summary']}{due_txt}"
-            item = QtWidgets.QListWidgetItem(txt)
-            item.setData(QtCore.Qt.ItemDataRole.UserRole, url_builder(it["key"]))
-            self.list.addItem(item)
 
-    def _activate(self, item: QtWidgets.QListWidgetItem):
-        url = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        if url:
-            self.openLink.emit(url)
+        # рівно 2 картки
+        for it in issues[:2]:
+            card = IssueCard(it, url_builder)
+            card.setFixedHeight(CARD_HEIGHT_PX())   # <<< СЮДИ: фікс-висота картки >>>
+            card.clicked.connect(self.openLink.emit)
+            self.vbox.addWidget(card)
+
+        self.vbox.addStretch(1)
 
     def _open_more(self):
         if self._more_url:
             self.openLink.emit(self._more_url)
 
 class TodayPopup(QtWidgets.QDialog):
-    def __init__(self, issues: list[dict], url_builder, parent=None):
+    def __init__(self, issues: list[dict], more_url: str, url_builder, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Today's tasks")
+        # невелике tool-вікно без ресайзу
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Tool)
         self.setModal(False)
-        self.resize(520, 360)
-        v = QtWidgets.QVBoxLayout(self)
-        v.addWidget(QtWidgets.QLabel("<b>Today's tasks</b>"))
-        self.list = QtWidgets.QListWidget()
-        v.addWidget(self.list)
-        for it in issues[:10]:
-            due_txt = f" (due {it['duedate']})" if it.get("duedate") else ""
-            item = QtWidgets.QListWidgetItem(f"{it['key']}: {it['summary']}{due_txt}")
-            item.setData(QtCore.Qt.ItemDataRole.UserRole, url_builder(it["key"]))
-            self.list.addItem(item)
-        self.list.itemActivated.connect(self._act)
 
-    def _act(self, item):
-        url = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        if url:
-            import webbrowser
-            webbrowser.open(url)
+        # Контент: той самий блок як у головному вікні
+        self.block = IssuesCardList("Today", self)
+        # фіксований розмір блоку вже виставлено всередині IssuesCardList,
+        # додамо тонкі відступи по краях вікна
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setContentsMargins(GAP_PX(), GAP_PX(), GAP_PX(), GAP_PX())
+        outer.setSpacing(0)
+        outer.addWidget(self.block)
+
+        # клік по картці/Show more → відкрити браузер
+        self.block.openLink.connect(lambda url: __import__("webbrowser").open(url))
+
+        # наповнити двома картками + "Show more"
+        self.block.set_issues(issues, more_url, url_builder)
+
+        # зробити саме вікно фіксованим (як у великих блоків)
+        win_w = BLOCK_WIDTH_PX() + GAP_PX()*2
+        win_h = BLOCK_HEIGHT_PX() + GAP_PX()*2
+        self.setFixedSize(win_w, win_h)
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, app_icon: QtGui.QIcon, parent=None):
@@ -312,13 +513,55 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowIcon(app_icon)
         self.resize(880, 600)
 
+        self.setStyleSheet("""
+            QFrame#Card { border: 1px solid #3a3f44; background: #1e1f24; border-radius: 12px; }
+            QFrame#Card[state="overdue"]   { border-color: #ff6b6b; }
+            QFrame#Card[state="today"]     { border-color: #ffd166; }
+            QFrame#Card[state="tomorrow"]  { border-color: #06d6a0; }
+
+            QLabel#Summary { color: palette(text); }
+
+            /* Badges */
+            QLabel[badge="true"] {
+                padding: 2px 8px;
+                border-radius: 10px;
+                background: #2b3036;
+                color: #c9d1d9;
+            }
+
+            /* Due pill */
+            QLabel#DuePill[state="overdue"]  { background: #3a0f0f; color: #ff9b9b; padding: 2px 8px; border-radius: 10px; }
+            QLabel#DuePill[state="today"]    { background: #3a2e0f; color: #ffd166; padding: 2px 8px; border-radius: 10px; }
+            QLabel#DuePill[state="tomorrow"] { background: #103528; color: #06d6a0; padding: 2px 8px; border-radius: 10px; }
+            QLabel#DuePill[state="future"],
+            QLabel#DuePill[state="none"]     { background: #2b3036; color: #9aa5b1; padding: 2px 8px; border-radius: 10px; }
+
+            /* Priority variants (динамічна властивість level) */
+            QLabel#PriorityBadge[level="Highest"] { background: #3a0f0f; color: #ff9b9b; }
+            QLabel#PriorityBadge[level="High"]    { background: #3a220f; color: #ffb27a; }
+            QLabel#PriorityBadge[level="Medium"]  { background: #243248; color: #8ab8ff; }
+            QLabel#PriorityBadge[level="Low"]     { background: #123a22; color: #5ad1a0; }
+            QLabel#PriorityBadge[level="Lowest"]  { background: #2b3036; color: #aab2bd; }
+
+            /* Status variants */
+            QLabel#StatusBadge[state="done"]       { background: #103528; color: #06d6a0; }
+            QLabel#StatusBadge[state="inprogress"] { background: #20324a; color: #8ab8ff; }
+            QLabel#StatusBadge[state="todo"]       { background: #3a2e0f; color: #ffd166; }
+            QLabel#StatusBadge[state="other"]      { background: #2b3036; color: #c9d1d9; }
+
+            /* Buttons */
+            QPushButton { padding: 6px 12px; border-radius: 8px; }
+            """)
+
+
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
         grid = QtWidgets.QGridLayout(central)
 
-        self.overdue = IssuesList("Overdue")
-        self.today = IssuesList("Today")
-        self.tomorrow = IssuesList("Tomorrow")
+        self.overdue = IssuesCardList("Overdue")
+        self.today = IssuesCardList("Today")
+        self.tomorrow = IssuesCardList("Tomorrow")
+
 
         for w in (self.overdue, self.today, self.tomorrow):
             w.openLink.connect(lambda url: __import__("webbrowser").open(url))
@@ -329,6 +572,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.refresh_btn = QtWidgets.QPushButton("Refresh")
         grid.addWidget(self.refresh_btn, 2, 1, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
+
+        # layout paddings
+        grid.setHorizontalSpacing(GAP_PX())
+        grid.setVerticalSpacing(GAP_PX())
+        grid.setContentsMargins(GAP_PX(), GAP_PX(), GAP_PX(), GAP_PX())
+
+        # Place blocks in a 2x2 grid; Tomorrow sits bottom-left (no spanning)
+        grid.addWidget(self.overdue, 0, 0)
+        grid.addWidget(self.today,   0, 1)
+        grid.addWidget(self.tomorrow,1, 0)
+
+        # spacer to balance bottom-right cell
+        grid.addItem(QtWidgets.QSpacerItem(BLOCK_WIDTH_PX(), BLOCK_HEIGHT_PX(),
+                                        QtWidgets.QSizePolicy.Policy.Fixed,
+                                        QtWidgets.QSizePolicy.Policy.Fixed), 1, 1)
+
+        # Fixed window size from metrics
+        win_w = BLOCK_WIDTH_PX()*2 + GAP_PX()*3      # 2 blocks + internal gaps + margins
+        win_h = BLOCK_HEIGHT_PX()*2 + GAP_PX()*3     # 2 rows + internal gaps + margins
+        self.setFixedSize(win_w, win_h)
+
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         event.ignore()
@@ -480,14 +744,21 @@ class JiraReminderController(QtCore.QObject):
         self.window.activateWindow()
 
     def show_today_popup(self):
-        if not self.today_issues:
-            try:
+        try:
+            if not self.today_issues:
                 jql_today = self.client.jql_for_day(self.cfg["assignee_email"], "today")
-                self.today_issues = self.client.search(jql_today, max_results=10)
-            except Exception:
-                pass
-        dlg = TodayPopup(self.today_issues, self.client.make_issue_url, self.window)
-        dlg.exec()
+                self.today_issues = self.client.search(jql_today, max_results=50)
+            else:
+                jql_today = self.client.jql_for_day(self.cfg["assignee_email"], "today")
+
+            more_url = self.client.make_issues_link(jql_today)
+            dlg = TodayPopup(self.today_issues, more_url, self.client.make_issue_url, self.window)
+            dlg.exec()
+        except Exception as e:
+            log.exception("show_today_popup failed")
+            self.tray.showMessage(APP_NAME, f"Помилка: {e}",
+                                QtWidgets.QSystemTrayIcon.MessageIcon.Critical, 8000)
+
 
     def _tray_activated(self, reason: QtWidgets.QSystemTrayIcon.ActivationReason):
         if reason == QtWidgets.QSystemTrayIcon.ActivationReason.Trigger:
@@ -500,6 +771,67 @@ class JiraReminderController(QtCore.QObject):
             if self._click_timer.isActive():
                 self._click_timer.stop()
             self.show_main()
+
+class FlowLayout(QtWidgets.QLayout):
+    def __init__(self, parent=None, margin=0, hspacing=6, vspacing=6):
+        super().__init__(parent)
+        self._items = []
+        self.setContentsMargins(margin, margin, margin, margin)
+        self._hspace = hspacing
+        self._vspace = vspacing
+
+    def addItem(self, item): self._items.append(item)
+    def count(self): return len(self._items)
+    def itemAt(self, i): return self._items[i] if 0 <= i < len(self._items) else None
+    def takeAt(self, i): return self._items.pop(i) if 0 <= i < len(self._items) else None
+    def expandingDirections(self): return QtCore.Qt.Orientation(0)
+    def hasHeightForWidth(self): return True
+
+    def heightForWidth(self, width):
+        return self._doLayout(QtCore.QRect(0,0,width,0), testOnly=True)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._doLayout(rect, testOnly=False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        s = QtCore.QSize(0, 0)
+        m = self.contentsMargins()
+        for i in range(self.count()):
+            item = self._items[i]
+            s = s.expandedTo(item.sizeHint())
+        s += QtCore.QSize(m.left()+m.right(), m.top()+m.bottom())
+        return s
+
+    def _doLayout(self, rect, testOnly):
+        x = rect.x()
+        y = rect.y()
+        lineHeight = 0
+        m = self.contentsMargins()
+        effectiveRect = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+        x = effectiveRect.x()
+        y = effectiveRect.y()
+        lineHeight = 0
+
+        for item in self._items:
+            wid = item.widget()
+            spaceX = self._hspace
+            spaceY = self._vspace
+            nextX = x + item.sizeHint().width() + spaceX
+            if nextX - spaceX > effectiveRect.right() and lineHeight > 0:
+                x = effectiveRect.x()
+                y = y + lineHeight + spaceY
+                nextX = x + item.sizeHint().width() + spaceX
+                lineHeight = 0
+            if not testOnly:
+                item.setGeometry(QtCore.QRect(QtCore.QPoint(x, y), item.sizeHint()))
+            x = nextX
+            lineHeight = max(lineHeight, item.sizeHint().height())
+        return y + lineHeight - rect.y() + m.bottom()
+
 
 # -------------------------- CLI: init/edit config --------------------------
 
@@ -557,11 +889,21 @@ def main():
     parser.add_argument("--init", action="store_true", help="Initialize encrypted config")
     parser.add_argument("--edit-config", action="store_true", help="Edit existing encrypted config")
     parser.add_argument("--logging", action="store_true", help="Enable DEBUG logging to console (if TTY) and to .log file")
+    parser.add_argument("--ui-scale", dest="ui_scale", type=float, default=1.0, metavar="X", help="UI scale factor (e.g. 1.25 for 125%%)")
+
     args = parser.parse_args()
 
     setup_logging(args.logging)
     log.debug("App start %s v%s", APP_NAME, __version__)
 
+    # after setup_logging(args.logging):
+    global UI_SCALE
+    UI_SCALE = max(0.75, min(2.5, args.ui_scale))  # clamp between 0.75x..2.5x
+
+    # apply to default font so text scales too
+    # font = QtGui.QFont()
+    # font.setPointSizeF(max(8.0, font.pointSizeF() * UI_SCALE))
+    
     if args.init:
         defaults = {"start_date_field": "customfield_10015", "issue_types": ["Sub-task - HW"], "done_jql": None}
         init_config_interactive(defaults)
@@ -582,6 +924,12 @@ def main():
 
     QtCore.QCoreApplication.setApplicationName(APP_NAME)
     app = QtWidgets.QApplication(sys.argv)
+    font = app.font()                      # поточна системна сім'я
+    ps = font.pointSizeF()
+    if ps <= 0:                            # якщо в пікселях/невизначено — візьмемо базу 12pt
+        ps = 12.0
+    font.setPointSizeF(max(7.5, ps * UI_SCALE))
+    app.setFont(font)
     app.setQuitOnLastWindowClosed(False) 
     ctrl = JiraReminderController(app, cfg)
     sys.exit(app.exec())
