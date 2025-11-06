@@ -1,0 +1,70 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'RC.*'
+
+permissions:
+  contents: write  # потрібно для створення релізу
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $tag="${{ github.ref_name }}"
+          $name="JiraReminder-$tag-windows-x86_64"
+          pyinstaller --noconfirm --onefile --name $name --icon app.ico --add-data "app.png;." jira_reminder.py
+          echo "artifact_name=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          tag="${{ github.ref_name }}"
+          name="JiraReminder-${tag}-linux-x86_64"
+          pyinstaller --noconfirm --onefile --name "$name" --add-data "app.png:." jira_reminder.py
+          echo "artifact_name=$name" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.artifact_name }}
+          path: dist/${{ env.artifact_name }}*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: true
+          files: |
+            artifacts/**/*

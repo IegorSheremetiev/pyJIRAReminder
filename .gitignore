@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.egg-info/
+*.egg
+*.log
+
+# Envs
+.venv/
+venv/
+env/
+ENV/
+*.env
+.env
+.env.*
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+.history/
+
+# Testing / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Project specific (локальні дані користувача)
+# Конфіг і логи зберігаються поза репозиторієм (у домашній директорії), але на всяк випадок:
+.jira_reminder/
