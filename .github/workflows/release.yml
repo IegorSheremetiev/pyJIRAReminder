@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Install deps
         run: |
@@ -33,7 +33,7 @@ jobs:
       - name: Build (Windows GUI)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --onefile --noconsole --name JiraReminder --icon app.ico pyJIRAReminder.py
+          pyinstaller --noconfirm --onefile --noconsole --name JiraReminder --icon app.ico --add-data "jira_reminder_icon_256.png;." pyJIRAReminder.py
 
       - name: Build (Linux)
         if: runner.os != 'Windows'

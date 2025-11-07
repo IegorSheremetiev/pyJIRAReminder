@@ -126,7 +126,7 @@ def decrypt_config(blob: bytes) -> dict:
 def load_config() -> dict:
     data = CONFIG_ENC_PATH.read_bytes()
     # log the path to the encrypted file
-    log.debug(f"Config PATH: {data}")
+    log.debug(f"Load Config PATH: {CONFIG_ENC_PATH}")
     obj = decrypt_config(data)
     # Інжектимо дефолти, якщо чогось бракує
     obj.setdefault("project_keys", [])
@@ -152,6 +152,7 @@ class JiraClient:
         self.session = requests.Session()
         self.session.auth = (self.email, self.token)
         self.session.headers.update({"Accept": "application/json"})
+        log.debug(f"The JiraClient is intialized for user {self.email}")
 
     def _cf_key(self) -> str | None:
         if not self.start_date_field:
@@ -374,6 +375,7 @@ class IssueCard(QtWidgets.QFrame):
         sp.setVerticalPolicy(QtWidgets.QSizePolicy.Policy.Fixed)
         self.setSizePolicy(sp)
         # (height is set by IssuesCardList via setFixedHeight(CARD_HEIGHT_PX()))
+        log.debug(f"The IssueCard for {issue['key']} is initialized")
 
 
     def mousePressEvent(self, e: QtGui.QMouseEvent) -> None:
@@ -453,6 +455,7 @@ class IssuesCardList(QtWidgets.QWidget):
 
         self._more_url = None
         self._url_builder = None
+        log.debug(f"The IssueCardList for {title} is initialized")
 
     def _clear_cards(self):
         while self.vbox.count():
@@ -649,6 +652,7 @@ class JiraReminderController(QtCore.QObject):
 
         self._setup_timers()
         self.refresh_all(initial=True)
+        log.debug("The JireReminderController is initialized")
 
     def _load_icon(self) -> QtGui.QIcon:
         ico = None
