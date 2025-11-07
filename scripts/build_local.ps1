@@ -22,7 +22,9 @@ pyinstaller --onefile --noconsole --name $APP --icon $ICON --add-data "assets;as
 if (Test-Path "dist\$APP.exe") {
     $out = "dist\$APP-v$ver-windows-x86_64.exe"
     if (Test-Path $out) { Remove-Item $out -Force }
-    Rename-Item "dist\$APP.exe" $out
+    $src     = Join-Path "dist" "$APP.exe"
+    $newName = "$APP-v$ver-windows-x86_64.exe"
+    Rename-Item -Path $src -NewName $newName -Force
     Write-Host "Built $out"
 } else {
     Write-Error "Build failed: dist\$APP.exe not found"

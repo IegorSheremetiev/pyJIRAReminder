@@ -27,7 +27,7 @@ APP_NAME = "Jira Reminder"
 __version__ = "1.0.1-rc"
 
 # --- UI scaling & metrics ---
-UI_SCALE = 1.0
+UI_SCALE = 1
 def S(px: float) -> int: return int(round(px * UI_SCALE))
 
 BLOCK_WIDTH_PX  = lambda: S(450)   # було 350
@@ -661,23 +661,34 @@ class JiraReminderController(QtCore.QObject):
         log.debug("The JireReminderController is initialized")
 
     def _load_icon(self) -> QtGui.QIcon:
-        ico = None
-        for name in ("app.ico", "app.png", "icon.png"):
-            p = pathlib.Path(__file__).with_name(name)
-            if p.exists():
-                ico = QtGui.QIcon(str(p))
-                break
-        if not ico or ico.isNull():
-            pm = QtGui.QPixmap(64, 64)
-            pm.fill(QtGui.QColor("white"))
-            painter = QtGui.QPainter(pm)
-            painter.setPen(QtGui.QPen(QtGui.QColor("black"), 3))
-            painter.drawEllipse(4, 4, 56, 56)
-            painter.drawLine(32, 32, 32, 12)
-            painter.drawLine(32, 32, 48, 32)
-            painter.end()
-            ico = QtGui.QIcon(pm)
-        return ico
+        """
+        Шукає іконку в assets/ для dev та PyInstaller onefile.
+        На Windows — пріоритет .ico, на Linux — .png. Є безпечний фолбек-ікон.
+        """
+        # Порядок пріоритетів залежно від платформи
+        if sys.platform.startswith("win"):
+            candidates = ("app.ico", "jira_reminder_icon_256.png", "app.png", "icon.png")
+        else:
+            candidates = ("jira_reminder_icon_256.png", "app.png", "icon.png", "app.ico")
+
+        for name in candidates:
+            p = asset_path(name)
+            if os.path.exists(p):
+                ico = QtGui.QIcon(p)
+                if not ico.isNull():
+                    return ico
+
+        # Фолбек: намалювати просту піктограму
+        pm = QtGui.QPixmap(64, 64)
+        pm.fill(QtGui.QColor("white"))
+        painter = QtGui.QPainter(pm)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(QtGui.QPen(QtGui.QColor("black"), 3))
+        painter.drawEllipse(4, 4, 56, 56)
+        painter.drawLine(32, 32, 32, 12)
+        painter.drawLine(32, 32, 48, 32)
+        painter.end()
+        return QtGui.QIcon(pm)
 
     def _setup_timers(self):
         self.tick = QtCore.QTimer(self)
@@ -901,7 +912,7 @@ def main():
     parser.add_argument("--init", action="store_true", help="Initialize encrypted config")
     parser.add_argument("--edit-config", action="store_true", help="Edit existing encrypted config")
     parser.add_argument("--logging", action="store_true", help="Enable DEBUG logging to console (if TTY) and to .log file")
-    parser.add_argument("--ui-scale", dest="ui_scale", type=float, default=1.0, metavar="X", help="UI scale factor (e.g. 1.25 for 125%%)")
+    parser.add_argument("--ui-scale", dest="ui_scale", type=float, default=1.25, metavar="X", help="UI scale factor (e.g. 1.25 for 125%%)")
 
     args = parser.parse_args()
 
