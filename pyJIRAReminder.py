@@ -55,16 +55,37 @@ def app_dir() -> pathlib.Path:
 CONFIG_ENC_PATH = app_dir() / "config.enc"
 LOG_PATH = app_dir() / "jira_reminder.log"
 MAGIC = b"JRM1"  # file header
+LOCK_PATH = str(app_dir() / "app.lock")
+
+def ensure_single_instance_or_exit(parent=None):
+    lock = QtCore.QLockFile(LOCK_PATH)
+    # Щоб після крешу старий lock не висів вічно (година — безпечно)
+    lock.setStaleLockTime(60 * 60 * 1000)  # 1h
+
+    if lock.tryLock(0):
+        return lock  # тримай посилання на lock до кінця життя програми
+    else:
+        # Якщо lock давній — спробуємо прибрати і зайняти
+        if lock.removeStaleLockFile() and lock.tryLock(100):
+            return lock
+        # Другий екземпляр — показуємо тост і виходимо
+        if parent is None:
+            app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        else:
+            app = QtWidgets.QApplication.instance()
+        QtWidgets.QMessageBox.information(parent, "Jira Reminder",
+            "Application is already running.")
+        sys.exit(0)
 
 log = logging.getLogger("jira_reminder")
 
-def setup_logging(enabled: bool):
+def setup_logging(enabled: bool, new_log: bool):
     if not enabled:
         return
     log.setLevel(logging.DEBUG)
 
     # Файловий лог
-    fh = logging.FileHandler(LOG_PATH, encoding="utf-8")
+    fh = logging.FileHandler(LOG_PATH, encoding="utf-8", mode="w" if new_log else "a")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
     log.addHandler(fh)
@@ -912,11 +933,12 @@ def main():
     parser.add_argument("--init", action="store_true", help="Initialize encrypted config")
     parser.add_argument("--edit-config", action="store_true", help="Edit existing encrypted config")
     parser.add_argument("--logging", action="store_true", help="Enable DEBUG logging to console (if TTY) and to .log file")
+    parser.add_argument("--new-log", action="store_true", help="Create new log file instead of appending")
     parser.add_argument("--ui-scale", dest="ui_scale", type=float, default=1.25, metavar="X", help="UI scale factor (e.g. 1.25 for 125%%)")
 
     args = parser.parse_args()
 
-    setup_logging(args.logging)
+    setup_logging(args.logging, args.new_log)
     log.debug("App start %s v%s", APP_NAME, __version__)
 
     # after setup_logging(args.logging):
@@ -944,9 +966,11 @@ def main():
     except Exception as e:
         print(f"[ERROR] Cannot load encrypted config: {e}")
         sys.exit(1)
-
+    
     QtCore.QCoreApplication.setApplicationName(APP_NAME)
     app = QtWidgets.QApplication(sys.argv)
+    lock = ensure_single_instance_or_exit()
+    log.debug("Single instance lock acquired: %s", lock.fileName())
     font = app.font()                      # поточна системна сім'я
     ps = font.pointSizeF()
     if ps <= 0:                            # якщо в пікселях/невизначено — візьмемо базу 12pt
@@ -954,6 +978,7 @@ def main():
     font.setPointSizeF(max(7.5, ps * UI_SCALE))
     app.setFont(font)
     app.setQuitOnLastWindowClosed(False) 
+    log.debug("QApplication initialized with UI scale %.2fx", UI_SCALE)
     ctrl = JiraReminderController(app, cfg)
     sys.exit(app.exec())
 
