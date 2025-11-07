@@ -36,7 +36,7 @@ jobs:
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
-          pyinstaller --onefile --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
+          pyinstaller --onefile --name JiraReminder --icon assets/app.ico --add-data "assets:assets" pyJIRAReminder.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
