@@ -1,9 +1,9 @@
 name: release
 
 on:
-  push:
-    tags:
-      - 'RC.*'      # run on RC.* tags (e.g. RC.0.6)
+  release:
+    types: [released, prereleased]
+      # run on RC.* tags (e.g. RC.0.6)
   workflow_dispatch:  # manual trigger
 
 permissions:
