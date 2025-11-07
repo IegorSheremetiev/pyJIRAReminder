@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.1...v0.7.2) (2025-11-07)
+
+
+### Bug Fixes
+
+* application lock mechanism set ([ac7c9c7](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/ac7c9c7efdb3a639a2b7c26e170a6653c9d59971))
+
 ## [0.7.1](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.0...v0.7.1) (2025-11-07)
 
 
