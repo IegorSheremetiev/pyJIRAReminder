@@ -24,7 +24,7 @@ from PyQt6 import QtWidgets, QtGui, QtCore
 
 # -------------------------- App constants & metrics --------------------------
 APP_NAME = "Jira Reminder"
-__version__ = "0.5.0"  # x-release-please-version
+__version__ = "0.7.1"  # x-release-please-version
 
 # --- UI scaling & metrics ---
 UI_SCALE = 1
