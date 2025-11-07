@@ -3,7 +3,7 @@ set -euo pipefail
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 
-APP=jira_reminder.py
+APP=pyJIRAReminder.py
 NAME=JiraReminder
 VER="v$(python - <<'PY'
 import re
@@ -13,7 +13,7 @@ PY
 
 pyinstaller --noconfirm --onefile \
   --name "${NAME}-${VER}-linux-x86_64" \
-  --add-data "app.png:." \
+  --add-data "jira_reminder_icon_256.png:." \
   "$APP"
 
 echo "Done. BIN: dist/${NAME}-${VER}-linux-x86_64"

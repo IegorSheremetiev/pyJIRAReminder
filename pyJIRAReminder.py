@@ -125,6 +125,8 @@ def decrypt_config(blob: bytes) -> dict:
 
 def load_config() -> dict:
     data = CONFIG_ENC_PATH.read_bytes()
+    # log the path to the encrypted file
+    log.debug(f"Config PATH: {data}")
     obj = decrypt_config(data)
     # Інжектимо дефолти, якщо чогось бракує
     obj.setdefault("project_keys", [])
