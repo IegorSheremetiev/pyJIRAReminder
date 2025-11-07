@@ -3,11 +3,11 @@ name: release
 on:
   push:
     tags:
-      - 'RC.*'            # run only on RC tags like RC.0.5
-  workflow_dispatch:       # allow manual trigger too
+      - 'RC.*'      # run on RC.* tags (e.g. RC.0.6)
+  workflow_dispatch:  # manual trigger
 
 permissions:
-  contents: write          # needed to create GitHub Releases
+  contents: write
 
 jobs:
   build:
@@ -16,15 +16,13 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.11'
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -33,12 +31,12 @@ jobs:
       - name: Build (Windows GUI)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --noconfirm --onefile --noconsole --name JiraReminder --icon app.ico --add-data "jira_reminder_icon_256.png;." pyJIRAReminder.py
+          pyinstaller --onefile --noconsole --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
 
       - name: Build (Linux)
-        if: runner.os != 'Windows'
+        if: runner.os == 'Linux'
         run: |
-          pyinstaller --onefile --name JiraReminder pyJIRAReminder.py
+          pyinstaller --onefile --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -50,8 +48,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           pattern: JiraReminder-*
           merge-multiple: true
@@ -63,7 +60,6 @@ jobs:
           name: ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           prerelease: true
-          files: |
-            release/**
+          files: release/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -22,6 +22,7 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from PyQt6 import QtWidgets, QtGui, QtCore
 
+# -------------------------- App constants & metrics --------------------------
 APP_NAME = "Jira Reminder"
 __version__ = "1.0.1-rc"
 
@@ -37,6 +38,11 @@ SHOW_MORE_H_PX  = lambda: S(28)
 BLOCK_HEIGHT_PX = lambda: HEADER_H_PX() + GAP_PX() + (CARD_HEIGHT_PX()*2) + GAP_PX() + SHOW_MORE_H_PX()
 
 # -------------------------- Paths & logging --------------------------
+def _base_path():
+    return getattr(sys, "_MEIPASS", os.path.abspath(os.path.dirname(__file__)))
+
+def asset_path(name: str) -> str:
+    return os.path.join(_base_path(), "assets", name)
 
 def user_home() -> pathlib.Path:
     return pathlib.Path.home()
