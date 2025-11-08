@@ -1,8 +1,6 @@
-name: release
+name: Dev Release
 
 on:
-  release:
-    types: [released, prereleased]
   workflow_dispatch:  # manual trigger
 
 permissions:
@@ -10,6 +8,7 @@ permissions:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/dev'
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
@@ -19,7 +18,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Install dependencies
         run: |
@@ -45,6 +44,7 @@ jobs:
 
   publish:
     needs: build
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
