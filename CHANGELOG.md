@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.4](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.3...v0.7.4) (2025-11-09)
+
+
+### Reverts
+
+* **ci:** release-please manifest moved back to root ([5e4199b](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/5e4199b74696a2377d05c10355c1f0dd4fdef721))
+* **ci:** release-please workflow fix for manifest location ([33c0dcd](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/33c0dcd3a4ffe8a8b9b4c424ab99f68828b16877))
+
 ## [0.7.3](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.2...v0.7.3) (2025-11-09)
 
 
