@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.3](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.2...v0.7.3) (2025-11-09)
+
+
+### Reverts
+
+* **ci:** release-please scripts are in root ([047b2bf](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/047b2bfa99900b0567f55ebc7200b7a456348d0a))
+* **ci:** release-please scripts are in root ([94c6379](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/94c6379514f20fcae9abef183474618fee4050eb))
+
 ## [0.7.2](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.1...v0.7.2) (2025-11-07)
 
 
