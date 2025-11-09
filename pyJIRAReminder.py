@@ -3,13 +3,13 @@
 
 """
 Jira Reminder — PyQt6 tray app (updated)
-- Дефолт:
+- Defaults:
   * start_date_field: customfield_10015
   * "Closed today": status CHANGED TO Done DURING (startOfDay(), now())
   * issue_types: ["Sub-task - HW"]
-- --init  : створення шифрованого конфігу
-- --edit-config : редагування існуючого конфігу (показує поточні значення, Enter = залишити)
-- --logging : увімкнути DEBUG-лог у консоль (якщо термінал є) і у файл поряд з config.enc
+- --init  : create encrypted config
+- --edit-config : edit existing config (shows current values, Enter = keep current)
+- --logging : enable DEBUG logging to console (if terminal exists) and to file next to config.enc
 """
 
 from tkinter import font
@@ -30,8 +30,8 @@ __version__ = "0.7.1"  # x-release-please-version
 UI_SCALE = 1
 def S(px: float) -> int: return int(round(px * UI_SCALE))
 
-BLOCK_WIDTH_PX  = lambda: S(450)   # було 350
-CARD_HEIGHT_PX  = lambda: S(150)   # трошки більше простору під summary
+BLOCK_WIDTH_PX  = lambda: S(450)   # was 350
+CARD_HEIGHT_PX  = lambda: S(150)   # slightly more space for summary
 GAP_PX          = lambda: S(12)
 HEADER_H_PX     = lambda: S(24)
 SHOW_MORE_H_PX  = lambda: S(28)
@@ -59,16 +59,16 @@ LOCK_PATH = str(app_dir() / "app.lock")
 
 def ensure_single_instance_or_exit(parent=None):
     lock = QtCore.QLockFile(LOCK_PATH)
-    # Щоб після крешу старий lock не висів вічно (година — безпечно)
+    # Prevent old lock from persisting forever after crash (1 hour is safe)
     lock.setStaleLockTime(60 * 60 * 1000)  # 1h
 
     if lock.tryLock(0):
-        return lock  # тримай посилання на lock до кінця життя програми
+        return lock  # keep lock reference until program end
     else:
-        # Якщо lock давній — спробуємо прибрати і зайняти
+        # If lock is stale - try to remove and acquire
         if lock.removeStaleLockFile() and lock.tryLock(100):
             return lock
-        # Другий екземпляр — показуємо тост і виходимо
+        # Second instance - show toast and exit
         if parent is None:
             app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         else:
@@ -84,13 +84,13 @@ def setup_logging(enabled: bool, new_log: bool):
         return
     log.setLevel(logging.DEBUG)
 
-    # Файловий лог
+    # File log
     fh = logging.FileHandler(LOG_PATH, encoding="utf-8", mode="w" if new_log else "a")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
     log.addHandler(fh)
 
-    # Консольний лог (лише якщо це справжній термінал)
+    # Console log (only if it's a real terminal)
     try:
         if sys.stdout and sys.stdout.isatty():
             sh = logging.StreamHandler(sys.stdout)
@@ -100,7 +100,7 @@ def setup_logging(enabled: bool, new_log: bool):
     except Exception:
         pass
 
-    # Менше шуму від HTTP-бібліотек
+    # Less noise from HTTP libraries
     logging.getLogger("urllib3").setLevel(logging.INFO)
     logging.getLogger("requests").setLevel(logging.INFO)
 
@@ -155,11 +155,11 @@ def load_config() -> dict:
     # log the path to the encrypted file
     log.debug(f"Load Config PATH: {CONFIG_ENC_PATH}")
     obj = decrypt_config(data)
-    # Інжектимо дефолти, якщо чогось бракує
+    # Inject defaults if anything is missing
     obj.setdefault("project_keys", [])
     obj.setdefault("issue_types", ["Sub-task - HW"])
     obj.setdefault("start_date_field", "customfield_10015")
-    # done_jql може бути None — тоді за замовчуванням використовуємо "Done during today"
+    # done_jql can be None - then we use default "Done during today"
     obj.setdefault("done_jql", None)
     return obj
 
@@ -224,7 +224,7 @@ class JiraClient:
     def jql_closed_today(self, assignee_email: str) -> str:
         if self.done_override:
             return self.done_override
-        # Дефолт: "Done сьогодні"
+        # Default: "Done today"
         proj = f' AND project in ({", ".join(self.projects)})' if self.projects else ""
         return f'assignee = "{assignee_email}"{proj} AND status CHANGED TO Done DURING (startOfDay(), now()) ORDER BY resolutiondate DESC'
 
@@ -242,7 +242,7 @@ class JiraClient:
             r.raise_for_status()
             data = r.json()
         except requests.HTTPError as e:
-            # Fallback: деякі інстанси тимчасово приймають лише GET-варіант нового API
+            # Fallback: some instances temporarily only accept GET variant of new API
             if getattr(e, "response", None) is not None and e.response.status_code in (404, 405):
                 log.warning("POST /search/jql not accepted, trying GET fallback")
                 r = self.session.get(
@@ -275,7 +275,7 @@ class JiraClient:
                 "priority": (f.get("priority") or {}).get("name"),
                 "status": (f.get("status") or {}).get("name"),
             })
-        # формуємо URL пізніше в UI, щоб не дублювати
+        # form URL later in UI to avoid duplication
         return parsed
 
     def make_issue_url(self, key: str) -> str:
@@ -474,7 +474,7 @@ class IssuesCardList(QtWidgets.QWidget):
         lay.addWidget(self.scroll)
         lay.addWidget(self.show_more_btn, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
 
-        # <<< СЮДИ: фікс-розміри блоку і видимого вікна під 2 картки >>>
+        # <<< HERE: fixed sizes for block and visible window for 2 cards >>>
         self.setFixedWidth(BLOCK_WIDTH_PX())
         self.setFixedHeight(BLOCK_HEIGHT_PX())
         self.scroll.setMinimumHeight(CARD_HEIGHT_PX()*2 + GAP_PX())
@@ -497,10 +497,10 @@ class IssuesCardList(QtWidgets.QWidget):
         self._url_builder = url_builder
         self.show_more_btn.setVisible(bool(more_url))
 
-        # рівно 2 картки
+        # exactly 2 cards
         for it in issues[:2]:
             card = IssueCard(it, url_builder)
-            card.setFixedHeight(CARD_HEIGHT_PX())   # <<< СЮДИ: фікс-висота картки >>>
+            card.setFixedHeight(CARD_HEIGHT_PX())   # <<< HERE: fixed card height >>>
             card.clicked.connect(self.openLink.emit)
             self.vbox.addWidget(card)
 
@@ -514,26 +514,26 @@ class TodayPopup(QtWidgets.QDialog):
     def __init__(self, issues: list[dict], more_url: str, url_builder, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Today's tasks")
-        # невелике tool-вікно без ресайзу
+        # small tool window without resize
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowType.Tool)
         self.setModal(False)
 
-        # Контент: той самий блок як у головному вікні
+        # Content: same block as in main window
         self.block = IssuesCardList("Today", self)
-        # фіксований розмір блоку вже виставлено всередині IssuesCardList,
-        # додамо тонкі відступи по краях вікна
+        # fixed block size is already set inside IssuesCardList,
+        # add thin padding around window edges
         outer = QtWidgets.QVBoxLayout(self)
         outer.setContentsMargins(GAP_PX(), GAP_PX(), GAP_PX(), GAP_PX())
         outer.setSpacing(0)
         outer.addWidget(self.block)
 
-        # клік по картці/Show more → відкрити браузер
+        # click on card/Show more → open browser
         self.block.openLink.connect(lambda url: __import__("webbrowser").open(url))
 
-        # наповнити двома картками + "Show more"
+        # fill with two cards + "Show more"
         self.block.set_issues(issues, more_url, url_builder)
 
-        # зробити саме вікно фіксованим (як у великих блоків)
+        # make window fixed size (like larger blocks)
         win_w = BLOCK_WIDTH_PX() + GAP_PX()*2
         win_h = BLOCK_HEIGHT_PX() + GAP_PX()*2
         self.setFixedSize(win_w, win_h)
@@ -568,7 +568,7 @@ class MainWindow(QtWidgets.QMainWindow):
             QLabel#DuePill[state="future"],
             QLabel#DuePill[state="none"]     { background: #2b3036; color: #9aa5b1; padding: 2px 8px; border-radius: 10px; }
 
-            /* Priority variants (динамічна властивість level) */
+            /* Priority variants (dynamic level property) */
             QLabel#PriorityBadge[level="Highest"] { background: #3a0f0f; color: #ff9b9b; }
             QLabel#PriorityBadge[level="High"]    { background: #3a220f; color: #ffb27a; }
             QLabel#PriorityBadge[level="Medium"]  { background: #243248; color: #8ab8ff; }
@@ -656,7 +656,7 @@ class JiraReminderController(QtCore.QObject):
         self.tray.show()
         self._click_timer = QtCore.QTimer(self)
         self._click_timer.setSingleShot(True)
-        # Візьмемо системний інтервал дабл-кліку, fallback 300 мс
+        # Get system double-click interval, fallback to 300ms
         try:
             self._click_timer.setInterval(QtGui.QGuiApplication.styleHints().mouseDoubleClickInterval())
         except Exception:
@@ -683,10 +683,10 @@ class JiraReminderController(QtCore.QObject):
 
     def _load_icon(self) -> QtGui.QIcon:
         """
-        Шукає іконку в assets/ для dev та PyInstaller onefile.
-        На Windows — пріоритет .ico, на Linux — .png. Є безпечний фолбек-ікон.
+        Searches for icon in assets/ for dev and PyInstaller onefile.
+        On Windows - priority for .ico, on Linux - .png. Has safe fallback icon.
         """
-        # Порядок пріоритетів залежно від платформи
+        # Priority order depending on platform
         if sys.platform.startswith("win"):
             candidates = ("app.ico", "jira_reminder_icon_256.png", "app.png", "icon.png")
         else:
@@ -699,7 +699,7 @@ class JiraReminderController(QtCore.QObject):
                 if not ico.isNull():
                     return ico
 
-        # Фолбек: намалювати просту піктограму
+        # Fallback: draw a simple icon
         pm = QtGui.QPixmap(64, 64)
         pm.fill(QtGui.QColor("white"))
         painter = QtGui.QPainter(pm)
@@ -730,7 +730,7 @@ class JiraReminderController(QtCore.QObject):
                 log.debug("Evening check: has_closed_today=%s", has)
                 if not has:
                     self.tray.showMessage(APP_NAME,
-                                          "Жодної задачі не закрито сьогодні. Обери хоча б одну і доведи до Done 💪",
+                                          "No tasks completed today. Choose at least one and get it to Done 💪",
                                           QtWidgets.QSystemTrayIcon.MessageIcon.Information, 10_000)
 
     def check_today_and_notify(self):
@@ -739,11 +739,11 @@ class JiraReminderController(QtCore.QObject):
             self.today_issues = self.client.search(jql_today, max_results=10)
             if self.today_issues:
                 items = "\n".join([f"{x['key']}: {x['summary']}" for x in self.today_issues[:5]])
-                self.tray.showMessage(APP_NAME, f"Сьогоднішні задачі:\n{items}",
+                self.tray.showMessage(APP_NAME, f"Today's tasks:\n{items}",
                                       QtWidgets.QSystemTrayIcon.MessageIcon.Information, 12_000)
         except Exception as e:
             log.exception("check_today_and_notify failed")
-            self.tray.showMessage(APP_NAME, f"Помилка оновлення: {e}",
+            self.tray.showMessage(APP_NAME, f"Update error: {e}",
                                   QtWidgets.QSystemTrayIcon.MessageIcon.Warning, 8000)
 
     def _has_closed_today(self) -> bool:
@@ -771,15 +771,15 @@ class JiraReminderController(QtCore.QObject):
             self.window.tomorrow.set_issues(tom_issues, self.client.make_issues_link(jql_tom), self.client.make_issue_url)
 
             if not initial:
-                self.tray.showMessage(APP_NAME, "Дані оновлено",
+                self.tray.showMessage(APP_NAME, "Data updated",
                                       QtWidgets.QSystemTrayIcon.MessageIcon.Information, 3000)
         except requests.HTTPError as e:
             log.exception("JIRA HTTP error during refresh")
-            self.tray.showMessage(APP_NAME, f"JIRA HTTP помилка: {e}",
+            self.tray.showMessage(APP_NAME, f"JIRA HTTP error: {e}",
                                   QtWidgets.QSystemTrayIcon.MessageIcon.Critical, 8000)
         except Exception as e:
             log.exception("Unexpected error during refresh")
-            self.tray.showMessage(APP_NAME, f"Помилка: {e}",
+            self.tray.showMessage(APP_NAME, f"Error: {e}",
                                   QtWidgets.QSystemTrayIcon.MessageIcon.Critical, 8000)
 
     def show_main(self):
@@ -800,18 +800,18 @@ class JiraReminderController(QtCore.QObject):
             dlg.exec()
         except Exception as e:
             log.exception("show_today_popup failed")
-            self.tray.showMessage(APP_NAME, f"Помилка: {e}",
+            self.tray.showMessage(APP_NAME, f"Error: {e}",
                                 QtWidgets.QSystemTrayIcon.MessageIcon.Critical, 8000)
 
 
     def _tray_activated(self, reason: QtWidgets.QSystemTrayIcon.ActivationReason):
         if reason == QtWidgets.QSystemTrayIcon.ActivationReason.Trigger:
-            # стартуємо таймер одинарного кліку; якщо прилетить DoubleClick — ми його скасуємо
+            # start single click timer; if DoubleClick arrives - we'll cancel it
             if self._click_timer.isActive():
                 self._click_timer.stop()
             self._click_timer.start()
         elif reason == QtWidgets.QSystemTrayIcon.ActivationReason.DoubleClick:
-            # подвійний клік — скасувати single-click і показати головне вікно
+            # double click - cancel single-click and show main window
             if self._click_timer.isActive():
                 self._click_timer.stop()
             self.show_main()
@@ -971,9 +971,9 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     lock = ensure_single_instance_or_exit()
     log.debug("Single instance lock acquired: %s", lock.fileName())
-    font = app.font()                      # поточна системна сім'я
+    font = app.font()                      # current system font family
     ps = font.pointSizeF()
-    if ps <= 0:                            # якщо в пікселях/невизначено — візьмемо базу 12pt
+    if ps <= 0:                            # if in pixels/undefined - use base 12pt
         ps = 12.0
     font.setPointSizeF(max(7.5, ps * UI_SCALE))
     app.setFont(font)
