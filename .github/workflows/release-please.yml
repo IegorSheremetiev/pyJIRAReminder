@@ -18,6 +18,14 @@ jobs:
           config-file: .github/release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      - name: Debug release-please outputs
+        if: always()
+        run: |
+          echo "release_created=[${{ steps.rp.outputs.release_created }}]"
+          echo "tag_name=[${{ steps.rp.outputs.tag_name }}]"
+          echo "major=[${{ steps.rp.outputs.major }}]"
+          echo "minor=[${{ steps.rp.outputs.minor }}]"
+
       # if release is created - start our build/publish
       - name: Trigger build on release
         if: steps.rp.outputs.release_created == 'true'
