@@ -1,8 +1,11 @@
-name: release
+name: Release
 
 on:
   release:
     types: [released, prereleased]
+  push:
+    tags:
+      - 'v*'  # Trigger on tags starting with v
   workflow_dispatch:  # manual trigger
 
 permissions:
@@ -19,7 +22,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Install dependencies
         run: |
