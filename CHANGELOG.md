@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.0...v0.9.1) (2025-11-09)
+
+
+### Bug Fixes
+
+* workflow PAT is added to trigger Release workflow ([0cc4d09](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/0cc4d09254eb5011a1afd0b45f9d655a26e94f57))
+
 ## [0.9.0](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.8.0...v0.9.0) (2025-11-09)
 
 
