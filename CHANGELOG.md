@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.1...v0.9.2) (2025-11-09)
+
+
+### Bug Fixes
+
+* pyinstaller includes src folder for scan ([b330e5b](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/b330e5b61f840d7d4291cea95cd8f767c6cfd1cd))
+
 ## [0.9.1](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.0...v0.9.1) (2025-11-09)
 
 
