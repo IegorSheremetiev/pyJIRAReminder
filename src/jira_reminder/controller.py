@@ -87,10 +87,17 @@ class JiraReminderController(QtCore.QObject):
         return QtGui.QIcon(pm)
 
     def _setup_timers(self):
+        # Define a timer that ticks each minute
         self.tick = QtCore.QTimer(self)
         self.tick.setInterval(60_000)
         self.tick.timeout.connect(self._on_tick)
         self.tick.start()
+
+        # Define a timer that ticks each 1 hour
+        self.refresh_tick = QtCore.QTimer(self)
+        self.refresh_tick.setInterval(1 * 60 * 60 * 1000)
+        self.refresh_tick.timeout.connect(self.refresh_all)
+        self.refresh_tick.start()
 
     def _on_tick_at(self, now: datetime):
         if now.hour == 10 and now.minute in (0, 1):
