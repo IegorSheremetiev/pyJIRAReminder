@@ -15,10 +15,10 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: rp
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          config-file: ./.github/release-please-config.json
+          manifest-file: ./.release-please-manifest.json
 
-      # якщо створено реліз — запускаємо наш білд/публікацію
+      # if release is created - start our build/publish
       - name: Trigger build on release
         if: steps.rp.outputs.release_created == 'true'
         run: echo "Release created ${{ steps.rp.outputs.tag_name }}"
