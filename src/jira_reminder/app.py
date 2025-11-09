@@ -8,25 +8,27 @@ from PyQt6 import QtWidgets, QtCore
 
 from .metrics import APP_NAME, __version__, set_ui_scale
 from .paths import CONFIG_ENC_PATH, LOCK_PATH
+
 from .logging_setup import setup_logging, log
 from .security import load_config, init_config_interactive, edit_config_interactive
 from .controller import JiraReminderController
 
 
-def ensure_single_instance_or_exit(parent=None):
-    from PyQt6 import QtCore, QtWidgets
 
+
+def ensure_single_instance_or_exit(parent=None):
     lock = QtCore.QLockFile(LOCK_PATH)
-    lock.setStaleLockTime(60 * 60 * 1000)
+    lock.setStaleLockTime(60 * 60 * 1000)  # 1 hour
 
     if lock.tryLock(0):
         return lock
 
+    # try to clean stale lock once
     if lock.removeStaleLockFile() and lock.tryLock(100):
         return lock
 
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
-    QtWidgets.QMessageBox.information(parent, "Jira Reminder", "Application is already running.")
+    # Another instance is really running
+    QtWidgets.QMessageBox.information(parent, APP_NAME, "Application is already running.")
     sys.exit(0)
 
 
@@ -46,9 +48,6 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-
-    setup_logging(args.logging, args.new_log)
-    log.debug("App start %s v%s", APP_NAME, __version__)
 
     set_ui_scale(args.ui_scale)
 
@@ -74,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     QtCore.QCoreApplication.setApplicationName(APP_NAME)
     app = QtWidgets.QApplication(sys.argv)
     lock = ensure_single_instance_or_exit()
+    setup_logging(args.logging, args.new_log)
+    log.debug("App start %s v%s", APP_NAME, __version__)
     log.debug("Single instance lock acquired: %s", lock.fileName())
 
     font = app.font()
