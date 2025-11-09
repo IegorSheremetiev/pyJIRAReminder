@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.4...v0.8.0) (2025-11-09)
+
+
+### Features
+
+* **refactor:** the monoluthic pyJIRAReminder.py is splitte on several files in ./src/jire_reminder ([c81db92](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/c81db92302adbcb7eb5990d83ed5d01c89aaad58))
+
 ## [0.7.4](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.3...v0.7.4) (2025-11-09)
 
 
