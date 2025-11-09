@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.8.0...v0.9.0) (2025-11-09)
+
+
+### Features
+
+* added timer with 2h tick to refresh all ([a650ee9](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/a650ee9ccc5cdb2b7bc61a0b13774447906ad21c))
+
 ## [0.8.0](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.7.4...v0.8.0) (2025-11-09)
 
 
