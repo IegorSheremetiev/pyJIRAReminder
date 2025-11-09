@@ -2,7 +2,7 @@ name: Release
 
 on:
   release:
-    types: [released, prereleased]
+    types: [published, prereleased]
   push:
     tags:
       - 'v*'  # Trigger on tags starting with v
