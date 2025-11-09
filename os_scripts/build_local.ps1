@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 $APP  = 'JiraReminder'
 $SRC  = 'pyJIRAReminder.py'
+$METRICS = 'src/jira_reminder/metrics.py'
 $ICON = 'assets\app.ico'
 
 # Ensure deps
@@ -12,11 +13,11 @@ pip install pyinstaller | Out-Null
 
 # Extract version from __version__ in pyJIRAReminder.py (if present)
 $ver = ''
-$match = Select-String -Path $SRC -Pattern '__version__\s*=\s*["'']([^"'']+)["'']' -ErrorAction SilentlyContinue
+$match = Select-String -Path $METRICS -Pattern '__version__\s*=\s*["'']([^"'']+)["'']' -ErrorAction SilentlyContinue
 if ($match) { $ver = $match.Matches[0].Groups[1].Value } else { $ver = 'dev' }
 
 # Build
-pyinstaller --onefile --noconsole --name $APP --icon $ICON --add-data "assets;assets" $SRC
+pyinstaller --onefile --noconsole --name $APP --paths src --icon $ICON --add-data "assets;assets" $SRC
 
 # Rename artifact
 if (Test-Path "dist\$APP.exe") {
