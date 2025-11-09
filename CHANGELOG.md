@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.5](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.4...v0.9.5) (2025-11-09)
+
+
+### Bug Fixes
+
+* **loggign:** invoke logger intialization after checks for instances ([37c9286](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/37c9286e2a0ead3c3bb8aeb6b45cf57e593a38db))
+
 ## [0.9.4](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.3...v0.9.4) (2025-11-09)
 
 
