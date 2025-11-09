@@ -35,8 +35,8 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 
-# Project specific (локальні дані користувача)
-# Конфіг і логи зберігаються поза репозиторієм (у домашній директорії), але на всяк випадок:
+# Project specific (user local data)
+# Config and logs are stored outside the repository (in home directory), but just in case:
 .jira_reminder/
 archives/
 patches/
