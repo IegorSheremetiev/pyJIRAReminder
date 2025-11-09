@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.3...v0.9.4) (2025-11-09)
+
+
+### Bug Fixes
+
+* --noconsole option active in pyinstaller ([a54aa61](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/a54aa618014906f95d9f6e518b02b39b7a8f7e5f))
+
 ## [0.9.3](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.2...v0.9.3) (2025-11-09)
 
 
