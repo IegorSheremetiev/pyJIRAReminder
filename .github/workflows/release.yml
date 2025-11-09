@@ -3,9 +3,9 @@ name: Release
 on:
   release:
     types: [published, prereleased]
-  push:
-    tags:
-      - 'v*'  # Trigger on tags starting with v
+  # push:
+  #   tags:
+  #     - 'v*'  # Trigger on tags starting with v
   workflow_dispatch:  # manual trigger
 
 permissions:
@@ -33,12 +33,12 @@ jobs:
       - name: Build (Windows GUI)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --onefile --noconsole --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
+          pyinstaller --onefile --paths src -noconsole --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
-          pyinstaller --onefile --name JiraReminder --icon assets/app.ico --add-data "assets:assets" pyJIRAReminder.py
+          pyinstaller --onefile --paths src --name JiraReminder --icon assets/app.ico --add-data "assets:assets" pyJIRAReminder.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
