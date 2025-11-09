@@ -22,6 +22,7 @@ A lightweight system-tray app for Windows (primary) and Linux (secondary) that s
 - [Build (local)](#build-local)
 - [Build (GitHub Actions)](#build-github-actions)
 - [Security model](#security-model)
+- [Testing](#testing)
 - [FAQ](#faq)
 - [License](#license)
 
@@ -39,7 +40,7 @@ A lightweight system-tray app for Windows (primary) and Linux (secondary) that s
   - **Single-click** → compact “Today” popup (same card block, fixed size, with **Show more**).
   - **Double-click** → full dashboard (three blocks).
   - Closing main window just hides it; **Quit** from tray menu exits the app.
-- **JQL defaults compatible with JIRA Cloud** (`/rest/api/3/search/jql` + POST payload).
+- **JQL defaults compatible with JIRA Cloud** (`/rest/api/3/search/jql` + POST payload, with a safe GET fallback where needed).
 - **Encrypted configuration** bound to the machine and OS user.
 - **UI scale** with `--ui-scale` (scales UI spacing and font size, preserves system font family).
 
@@ -81,10 +82,16 @@ pip install -r requirements.txt
 ## Quick start
 ```bash
 # 1) Initialize encrypted config (stored under your home folder)
-python jira_reminder.py --init
+python pyJIRAReminder.py --init
 
 # 2) Run with logs and comfortable UI scale (keeps system font family)
-python jira_reminder.py --logging --ui-scale 1.15
+python pyJIRAReminder.py --logging --ui-scale 1.15
+
+# Alternative (package entry):
+python -m jira_reminder.app --logging --ui-scale 1.15
+
+# If installed as a package (see console script below):
+jira-reminder --logging --ui-scale 1.15
 ```
 
 **Config & log location**
@@ -110,7 +117,7 @@ python jira_reminder.py --logging --ui-scale 1.15
 
 - Run `--edit-config` to review/modify existing values (press Enter to keep a value):
 ```bash
-python jira_reminder.py --edit-config
+python pyJIRAReminder.py --edit-config
 ```
 
 **Encryption storage path**: `~/.jira_reminder/config.enc` (Windows: in your user profile folder).
@@ -181,7 +188,7 @@ Then block-specific filters:
 
 Enable verbose logs:
 ```bash
-python jira_reminder.py --logging
+python pyJIRAReminder.py --logging
 ```
 Logs are written to:
 - Windows: `C:\Users\<YOU>\.jira_reminder\jira_reminder.log`
@@ -201,16 +208,28 @@ Logs are written to:
 pip install -r requirements.txt
 pip install pyinstaller
 
-# Windows one-file build (GUI app)
+# Option A: use provided spec file (recommended)
+pyinstaller JiraReminder.spec
+
+# Option B: inline commands matching CI
+# Windows (GUI app)
 pyinstaller ^
   --onefile ^
+  --paths src ^
   --noconsole ^
   --name JiraReminder ^
-  --icon app.ico ^
-  jira_reminder.py
+  --icon assets/app.ico ^
+  --add-data "assets;assets" ^
+  pyJIRAReminder.py
 
-# Linux one-file build
-pyinstaller   --onefile   --name JiraReminder   jira_reminder.py
+# Linux
+pyinstaller \
+  --onefile \
+  --paths src \
+  --name JiraReminder \
+  --icon assets/app.ico \
+  --add-data "assets:assets" \
+  pyJIRAReminder.py
 ```
 
 Artifacts are under `dist/`.
@@ -219,71 +238,11 @@ Artifacts are under `dist/`.
 
 ## Build (GitHub Actions)
 
-Build **only on tags** starting with `RC.` (release candidates). The workflow builds one-file binaries for Windows and Linux and attaches them to a Release.
+This repo uses two workflows:
+- `release-please.yml` automates versioning and CHANGELOG via Release Please (opens PRs and tags releases). It updates `pyproject.toml` and `src/jira_reminder/metrics.py`.
+- `release.yml` builds Windows/Linux one-file binaries on GitHub release events or manual dispatch, and uploads artifacts to the release.
 
-`.github/workflows/release.yml`:
-```yaml
-name: release
-on:
-  push:
-    tags:
-      - 'RC.*'
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build (onefile)
-        run: |
-          pyinstaller --onefile --name JiraReminder jira_reminder.py
-
-      - name: Archive
-        uses: actions/upload-artifact@v4
-        with:
-          name: JiraReminder-${{ runner.os }}
-          path: dist/**
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: JiraReminder-Windows
-          path: win
-      - uses: actions/download-artifact@v4
-        with:
-          name: JiraReminder-Linux
-          path: linux
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            win/**
-            linux/**
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+CI build commands mirror the local example above and use `pyJIRAReminder.py` as the entry point, bundling `assets/`.
 
 ---
 
@@ -319,4 +278,47 @@ Use OS tools (Windows Task Scheduler / Linux desktop autostart) pointing to the 
 
 ## License
 MIT (see `LICENSE`).
+
+---
+
+## Testing
+
+- Controller notification behavior tests (uses a lightweight fake tray and fake client):
+
+```bash
+python scripts/test_controller_notifications.py
+```
+
+Notes:
+- Requires `PyQt6` installed.
+- On Linux headless environments, use `xvfb-run -a python scripts/test_controller_notifications.py`.
+
+---
+
+## Project structure
+
+```
+src/jira_reminder/
+  app.py            # CLI and Qt application bootstrap
+  controller.py     # Tray icon, timers, notifications, data refreshes
+  jira_client.py    # Jira Cloud client (POST /rest/api/3/search/jql; GET fallback)
+  ui.py             # FlowLayout, IssueCard, IssuesCardList, TodayPopup, MainWindow
+  metrics.py        # Version, UI_SCALE and scaling helpers
+  paths.py          # Asset/config/log paths and single-instance lock path
+  security.py       # Scrypt + AES-GCM config encryption/decryption; init/edit helpers
+  logging_setup.py  # Logging configuration and shared logger
+  __init__.py       # Public exports (APP_NAME, __version__, JiraClient, Controller)
+
+pyJIRAReminder.py   # Top-level launcher; adds ./src to sys.path in dev
+assets/             # Icons and other resources (bundled into the exe)
+scripts/            # Tests and helpers (e.g., controller notification tests)
+os_scripts/         # Local build helper scripts (.ps1 / .sh)
+JiraReminder.spec   # PyInstaller spec file
+```
+
+Notes:
+- Run via `pyJIRAReminder.py` or `python -m jira_reminder.app`.
+- After installing the package (`pip install .`), you can run the app with the `jira-reminder` command.
+- The package exposes `JiraClient` and `JiraReminderController` for tests/imports.
+- An hourly background refresh timer complements the manual Refresh button.
 
