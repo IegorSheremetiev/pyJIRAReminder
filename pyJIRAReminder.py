@@ -340,32 +340,7 @@ class IssueCard(QtWidgets.QFrame):
             for k, v in props.items():
                 lbl.setProperty(k, v)
             return lbl
-        # for text, objname in ((itype, "TypeBadge"), (proj, "ProjBadge")):
-        #     b = QtWidgets.QLabel(text); b.setObjectName(objname); b.setProperty("badge", True)
-        #     badges.addWidget(b)
-
-        # prio_badge = QtWidgets.QLabel(f"Priority: {prio}")
-        # prio_badge.setObjectName("PriorityBadge")
-        # prio_badge.setProperty("badge", True)
-        # prio_badge.setProperty("level", prio)
-        # badges.addWidget(prio_badge)
-
-        # status_badge = QtWidgets.QLabel(f"Status: {stat}")
-        # status_badge.setObjectName("StatusBadge")
-        # status_badge.setProperty("badge", True)
-        # status_badge.setProperty("state", self._status_state(stat))
-        # badges.addWidget(status_badge)
-
         
-
-        # badges.addWidget(_badge(itype, "TypeBadge"))
-        
-        # prio_badge = _badge(f"Priority: {prio}", "PriorityBadge", "level", prio)
-        # badges.addWidget(prio_badge)
-
-        # status_badge = _badge(f"Status: {stat}", "StatusBadge", "state", self._status_state(stat))
-        # badges.addWidget(status_badge)
-
         badges.addWidget(_badge(itype, "TypeBadge"))
         badges.addWidget(_badge(f"Priority: {prio}", "PriorityBadge", level=prio))
         badges.addWidget(_badge(f"Status: {stat}", "StatusBadge", state=self._status_state(stat)))
@@ -945,10 +920,6 @@ def main():
     global UI_SCALE
     UI_SCALE = max(0.75, min(2.5, args.ui_scale))  # clamp between 0.75x..2.5x
 
-    # apply to default font so text scales too
-    # font = QtGui.QFont()
-    # font.setPointSizeF(max(8.0, font.pointSizeF() * UI_SCALE))
-    
     if args.init:
         defaults = {"start_date_field": "customfield_10015", "issue_types": ["Sub-task - HW"], "done_jql": None}
         init_config_interactive(defaults)
