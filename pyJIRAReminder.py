@@ -691,14 +691,12 @@ class JiraReminderController(QtCore.QObject):
         self.tick.setInterval(60_000)
         self.tick.timeout.connect(self._on_tick)
         self.tick.start()
-
-    def _on_tick(self):
-        now = datetime.now()
+    
+    def _on_tick_at(self, now: datetime):
         if now.hour == 10 and now.minute in (0, 1):
             log.debug("10:00 check triggered")
             self.check_today_and_notify()
         if dtime(16, 30) <= dtime(now.hour, now.minute) <= dtime(19, 0):
-            from datetime import timedelta
             if (self._last_close_check is None) or ((now - self._last_close_check).total_seconds() >= 30*60):
                 self._last_close_check = now
                 has = self._has_closed_today()
@@ -707,6 +705,9 @@ class JiraReminderController(QtCore.QObject):
                     self.tray.showMessage(APP_NAME,
                                           "No tasks completed today. Choose at least one and get it to Done 💪",
                                           QtWidgets.QSystemTrayIcon.MessageIcon.Information, 10_000)
+
+    def _on_tick(self):
+        self._on_tick_at(datetime.now())
 
     def check_today_and_notify(self):
         try:
