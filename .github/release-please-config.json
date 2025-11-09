@@ -11,7 +11,7 @@
 
       "extra-files": [
         "pyproject.toml",
-        "pyJIRAReminder.py"
+        "src/jira_reminder/metrics.py"
       ]
     }
   }
