@@ -229,7 +229,7 @@ class JiraClient:
         return f'assignee = "{assignee_email}"{proj} AND status CHANGED TO Done DURING (startOfDay(), now()) ORDER BY resolutiondate DESC'
 
     def search(self, jql: str, max_results: int = 50) -> list[dict]:
-        url = f"{self.base}/rest/api/3/search/jql"
+        url = f"{self.base}/rest/api/search/jql"
         payload = {
             "jql": jql,
             "maxResults": max_results,
