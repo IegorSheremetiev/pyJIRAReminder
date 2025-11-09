@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.2...v0.9.3) (2025-11-09)
+
+
+### Bug Fixes
+
+* release.yml generates relese version, not prerelease ([40640bf](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/40640bf6152ef3004b2bb1efd25c9659dc616514))
+
 ## [0.9.2](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.1...v0.9.2) (2025-11-09)
 
 
