@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 APP_NAME = "Jira Reminder"
-__version__ = "0.9.5"  # x-release-please-version
+__version__ = "0.9.6"  # x-release-please-version
 
 # --- UI scaling & metrics ---
 
