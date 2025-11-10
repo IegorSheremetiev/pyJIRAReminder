@@ -33,7 +33,7 @@ jobs:
       - name: Build (Windows GUI)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --onefile --paths src --noconsole --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
+          pyinstaller --onefile --paths src --name JiraReminder --icon assets/app.ico --add-data "assets;assets" pyJIRAReminder.py
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
