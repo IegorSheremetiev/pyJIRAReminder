@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sys
 import argparse
+import subprocess, os, shutil, ctypes
 
 from PyQt6 import QtWidgets, QtCore
 
@@ -48,6 +49,51 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
+
+    # Quick helper: ensure a console is available when running CLI-only modes from a GUI/no-console build
+    def open_console_or_terminal_for_args(cli_args: list[str]) -> bool:
+        # Windows: allocate a console for interactive CLI work
+        if sys.platform == "win32":
+            try:
+                if ctypes.windll.kernel32.AllocConsole() != 0:
+                    # redirect stdio to the new console
+                    sys.stdout = open("CONOUT$", "w", buffering=1)
+                    sys.stderr = open("CONOUT$", "w", buffering=1)
+                    sys.stdin = open("CONIN$", "r")
+                return True
+            except Exception:
+                return False
+
+        # Linux / other: attempt to spawn a terminal emulator that runs this executable with args
+        exe = os.path.abspath(sys.argv[0])
+        terminals = ["x-terminal-emulator", "gnome-terminal", "konsole", "xterm", "alacritty", "tilix", "mate-terminal", "lxterminal"]
+        for term in terminals:
+            term_path = shutil.which(term)
+            if not term_path:
+                continue
+            try:
+                if term in ("gnome-terminal", "mate-terminal", "tilix"):
+                    subprocess.Popen([term_path, "--", exe] + cli_args)
+                else:
+                    subprocess.Popen([term_path, "-e", exe] + cli_args)
+                return True
+            except Exception:
+                continue
+        return False
+
+    # If user requested console-only operations, make sure a console/terminal is available
+    if args.init or args.edit_config:
+        cli_args = []
+        if args.init:
+            cli_args.append("--init")
+        if args.edit_config:
+            cli_args.append("--edit-config")
+        # if running headless (no tty) try to open console/terminal to run interactive code in-place
+        if not sys.stdin or not sys.stdin.isatty():
+            ok = open_console_or_terminal_for_args(cli_args)
+            if not ok:
+                print("No console available. Either run the program from a terminal or rebuild without --noconsole.")
+                return 1
 
     set_ui_scale(args.ui_scale)
 
