@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.7](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.6...v0.9.7) (2025-11-10)
+
+
+### Bug Fixes
+
+* **cli:** Added invokation of the terminal when it is required ([7143ee4](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/7143ee4d454224daf663bd07844e503e9384c0d9))
+
 ## [0.9.6](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.5...v0.9.6) (2025-11-10)
 
 
