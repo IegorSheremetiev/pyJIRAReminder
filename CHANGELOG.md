@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.8](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.7...v0.9.8) (2025-11-10)
+
+
+### Reverts
+
+* **release:** workflow reverted to generate noconsole version ([5b46950](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/5b46950c9e98f9eb26ca43a64ee94a22359725d4))
+
 ## [0.9.7](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.6...v0.9.7) (2025-11-10)
 
 
