@@ -102,10 +102,6 @@ def main(argv: list[str] | None = None) -> int:
         init_config_interactive(defaults)
         return 0
 
-    if args.edit_config:
-        edit_config_interactive()
-        return 0
-
     if not CONFIG_ENC_PATH.exists():
         print("Encrypted config not found. Run: pyJIRAReminder.py --init")
         return 1
@@ -115,6 +111,10 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as e:
         print(f"[ERROR] Cannot load encrypted config: {e}")
         return 1
+    
+    if args.edit_config:
+        edit_config_interactive()
+        return 0
 
     QtCore.QCoreApplication.setApplicationName(APP_NAME)
     app = QtWidgets.QApplication(sys.argv)
