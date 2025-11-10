@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.6](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.5...v0.9.6) (2025-11-10)
+
+
+### Bug Fixes
+
+* **workflow:** console enable for win pyinstaller ([0703e5f](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/0703e5f29ec96a6c2864676c795db73386967771))
+
 ## [0.9.5](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.4...v0.9.5) (2025-11-09)
 
 
