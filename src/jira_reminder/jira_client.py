@@ -54,7 +54,10 @@ class JiraClient:
             f'issuetype in ({issuet})' if issuet else "",
             'statusCategory != Done',
         ]
-        return " AND ".join([p for p in parts if p])
+        result = " AND ".join([p for p in parts if p])
+        log.debug(f"_base_constraints: projects={self.projects}, issue_types={self.issue_types}, assignee={assignee_email}")
+        log.debug(f"_base_constraints result: {result}")
+        return result
 
     def jql_overdue(self, assignee_email: str) -> str:
         base = self._base_constraints(assignee_email)
@@ -62,7 +65,9 @@ class JiraClient:
         or_parts = ['(duedate < startOfDay() AND duedate is not EMPTY)']
         if cf:
             or_parts.append(f'({cf} < startOfDay() AND {cf} is not EMPTY)')
-        return f'{base} AND ({" OR ".join(or_parts)}) ORDER BY duedate ASC, updated DESC'
+        jql = f'{base} AND ({" OR ".join(or_parts)}) ORDER BY duedate ASC, updated DESC'
+        log.debug(f"jql_overdue: custom_field={cf}, final_jql={jql}")
+        return jql
 
     def jql_for_day(self, assignee_email: str, day: str) -> str:
         shift = 0 if day == "today" else 1
@@ -72,13 +77,18 @@ class JiraClient:
         or_parts = [f'(duedate = {target})']
         if cf:
             or_parts.append(f'({cf} = {target})')
-        return f'{base} AND ({" OR ".join(or_parts)}) ORDER BY duedate ASC, updated DESC'
+        jql = f'{base} AND ({" OR ".join(or_parts)}) ORDER BY duedate ASC, updated DESC'
+        log.debug(f"jql_for_day({day}): custom_field={cf}, target={target}, final_jql={jql}")
+        return jql
 
     def jql_closed_today(self, assignee_email: str) -> str:
         if self.done_override:
+            log.debug(f"jql_closed_today: using override: {self.done_override}")
             return self.done_override
         proj = f' AND project in ({", ".join(self.projects)})' if self.projects else ""
-        return f'assignee = "{assignee_email}"{proj} AND status CHANGED TO Done DURING (startOfDay(), now()) ORDER BY resolutiondate DESC'
+        jql = f'assignee = "{assignee_email}"{proj} AND status CHANGED TO Done DURING (startOfDay(), now()) ORDER BY resolutiondate DESC'
+        log.debug(f"jql_closed_today: final_jql={jql}")
+        return jql
 
     def search(self, jql: str, max_results: int = 50) -> List[Dict]:
         url = f"{self.base}/rest/api/3/search/jql"
@@ -89,6 +99,7 @@ class JiraClient:
         }
         log.debug("POST %s", url)
         log.debug("JQL: %s", jql)
+        log.debug("Requesting max_results: %d", max_results)
         try:
             r = self.session.post(url, json=payload, timeout=30)
             log.debug("HTTP %s %s", r.status_code, r.reason)
@@ -114,21 +125,29 @@ class JiraClient:
                 log.error("JIRA HTTP error: %s\nResponse body:\n%s", e, body)
                 raise
         issues = data.get("issues", [])
+        log.debug("Total issues returned from JIRA: %d", len(issues))
+        
         parsed: List[Dict] = []
         for it in issues:
             key = it["key"]
             f = it.get("fields", {})
-            parsed.append(
-                {
-                    "key": key,
-                    "summary": f.get("summary", "(no summary)"),
-                    "duedate": f.get("duedate"),
-                    "issuetype": (f.get("issuetype") or {}).get("name"),
-                    "project": (f.get("project") or {}).get("key"),
-                    "priority": (f.get("priority") or {}).get("name"),
-                    "status": (f.get("status") or {}).get("name"),
-                }
-            )
+            status_name = (f.get("status") or {}).get("name", "Unknown")
+            issuetype_name = (f.get("issuetype") or {}).get("name", "Unknown")
+            duedate = f.get("duedate")
+            
+            issue_dict = {
+                "key": key,
+                "summary": f.get("summary", "(no summary)"),
+                "duedate": duedate,
+                "issuetype": issuetype_name,
+                "project": (f.get("project") or {}).get("key"),
+                "priority": (f.get("priority") or {}).get("name"),
+                "status": status_name,
+            }
+            parsed.append(issue_dict)
+            log.debug(f"  Issue: {key} | Type: {issuetype_name} | Status: {status_name} | Due: {duedate} | Summary: {f.get('summary', '(no summary)')[:50]}")
+        
+        log.debug(f"Parsed {len(parsed)} issues from response")
         return parsed
 
     def make_issue_url(self, key: str) -> str:

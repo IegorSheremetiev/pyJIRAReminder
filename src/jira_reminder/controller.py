@@ -100,22 +100,32 @@ class JiraReminderController(QtCore.QObject):
         self.refresh_tick.start()
 
     def _on_tick_at(self, now: datetime):
+        # Morning check at 10:00
         if now.hour == 10 and now.minute in (0, 1):
-            log.debug("10:00 check triggered")
+            log.info(f"10:00 check triggered at {now.strftime('%H:%M:%S')}")
             self.check_today_and_notify()
 
+        # Evening check between 16:30 and 19:00, every 30 minutes
         if dtime(16, 30) <= dtime(now.hour, now.minute) <= dtime(19, 0):
             if (self._last_close_check is None) or ((now - self._last_close_check).total_seconds() >= 30 * 60):
                 self._last_close_check = now
                 has = self._has_closed_today()
-                log.debug("Evening check: has_closed_today=%s", has)
+                log.info(f"Evening check at {now.strftime('%H:%M:%S')}: has_closed_today={has}")
                 if not has:
+                    log.debug("Showing evening reminder notification")
                     self.tray.showMessage(
                         APP_NAME,
                         "No tasks completed today. Choose at least one and get it to Done 💪",
                         QtWidgets.QSystemTrayIcon.MessageIcon.Information,
                         10_000,
                     )
+                else:
+                    log.debug("Not showing evening notification because task was closed")
+            else:
+                time_since_check = (now - self._last_close_check).total_seconds()
+                log.debug(f"Evening check skipped, only {time_since_check:.0f}s since last check (need 30min)")
+        elif now.hour in range(16, 20):  # Log when in evening hours but outside the window
+            log.debug(f"Tick at {now.strftime('%H:%M:%S')}, not in evening check window yet")
 
     def _on_tick(self):
         self._on_tick_at(datetime.now())
@@ -123,15 +133,20 @@ class JiraReminderController(QtCore.QObject):
     def check_today_and_notify(self):
         try:
             jql_today = self.client.jql_for_day(self.cfg["assignee_email"], "today")
+            log.debug(f"check_today_and_notify: querying with jql_today={jql_today}")
             self.today_issues = self.client.search(jql_today, max_results=10)
+            log.debug(f"check_today_and_notify: got {len(self.today_issues)} today issues")
             if self.today_issues:
                 items = "\n".join([f"{x['key']}: {x['summary']}" for x in self.today_issues[:5]])
+                log.info(f"Showing morning notification with {len(self.today_issues)} today issues")
                 self.tray.showMessage(
                     APP_NAME,
                     f"Today's tasks:\n{items}",
                     QtWidgets.QSystemTrayIcon.MessageIcon.Information,
                     12_000,
                 )
+            else:
+                log.debug("No today issues found, not showing morning notification")
         except Exception as e:
             log.exception("check_today_and_notify failed")
             self.tray.showMessage(
@@ -144,8 +159,11 @@ class JiraReminderController(QtCore.QObject):
     def _has_closed_today(self) -> bool:
         try:
             jql = self.client.jql_closed_today(self.cfg["assignee_email"])
+            log.debug(f"_has_closed_today: querying with jql={jql}")
             issues = self.client.search(jql, max_results=1)
-            return len(issues) > 0
+            has_closed = len(issues) > 0
+            log.debug(f"_has_closed_today: result={has_closed}, found {len(issues)} closed issues")
+            return has_closed
         except Exception:
             log.exception("_has_closed_today failed")
             return False
