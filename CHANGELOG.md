@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.8...v0.10.0) (2025-11-11)
+
+
+### Features
+
+* new tests for pop-up reminders and new structure ([b0c45f1](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/b0c45f1e8fc5e2de20682fcdeb13a691e5611683))
+
 ## [0.9.8](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.7...v0.9.8) (2025-11-10)
 
 
