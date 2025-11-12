@@ -61,7 +61,7 @@ class JiraReminderController(QtCore.QObject):
         self._setup_timers()
         self.refresh_all(initial=True)
         self.__undone_check_period = 30 * 60  # 30 minutes
-        log.debug(f"The JireReminderController is initialized at {datetime.now().strftime("%d-%m-%Y %H:%M:%S")}")
+        log.debug(f'The JireReminderController is initialized at {datetime.now().strftime("%d-%m-%Y %H:%M:%S")}')
 
     def _load_icon(self) -> QtGui.QIcon:
         if sys.platform.startswith("win"):
@@ -102,11 +102,18 @@ class JiraReminderController(QtCore.QObject):
 
     def _on_tick_at(self, now: datetime):
         log.debug("Tick at %s", now.strftime("%H:%M:%S"))
+        log.debug("Tick at %s", now.strftime("%H:%M:%S"))
         if now.hour == 10 and now.minute in (0, 1):
             log.debug("10:00 check triggered")
             self.check_today_and_notify()
 
         if dtime(16, 30) <= dtime(now.hour, now.minute) <= dtime(19, 0):
+            seconds_passed = (int((now - self._last_close_check).total_seconds()) + 1) if self._last_close_check else float('inf')
+            log.debug("Evening check time window: now %s, last check %s, seconds passed %s", now.strftime("%H:%M:%S"), 
+                      self._last_close_check.strftime("%H:%M:%S") if self._last_close_check else "None", 
+                      seconds_passed)
+            
+            if (self._last_close_check is None) or (seconds_passed >= self.__undone_check_period):
             seconds_passed = (int((now - self._last_close_check).total_seconds()) + 1) if self._last_close_check else float('inf')
             log.debug("Evening check time window: now %s, last check %s, seconds passed %s", now.strftime("%H:%M:%S"), 
                       self._last_close_check.strftime("%H:%M:%S") if self._last_close_check else "None", 
@@ -151,6 +158,7 @@ class JiraReminderController(QtCore.QObject):
     def _has_closed_today(self) -> bool:
         try:
             jql = self.client.jql_closed_today(self.cfg["assignee_email"])
+            log.debug("Checking closed today with JQL: %s", jql)
             log.debug("Checking closed today with JQL: %s", jql)
             issues = self.client.search(jql, max_results=1)
             return len(issues) > 0
