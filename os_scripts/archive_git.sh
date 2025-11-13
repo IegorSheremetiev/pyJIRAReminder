@@ -54,7 +54,7 @@ fi
 # Prefer the repo root if inside a git repo, otherwise use current dir
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 archive_dir="$repo_root/archives"
-manifest_path="$repo_root/.github/.release-please-manifest.json"
+manifest_path="$repo_root/.release-please-manifest.json"
 
 mkdir -p "$archive_dir"
 

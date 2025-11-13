@@ -8,7 +8,7 @@ param (
 $name = "pyJiraReminder"
 $repoRoot = Resolve-Path ".\"
 $archiveDir = Join-Path $repoRoot "archives"
-$manifestPath = Join-Path $repoRoot ".github\.release-please-manifest.json"
+$manifestPath = Join-Path $repoRoot ".release-please-manifest.json"
 $VersionStorage = "."
 
 # Ensure archive directory exists
