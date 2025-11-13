@@ -377,3 +377,242 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         event.ignore()
         self.hide()
+
+
+class SecureConfigDialog(QtWidgets.QDialog):
+    """Dialog to edit the encrypted (secure) configuration portion."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Secure configuration")
+
+        from .paths import CONFIG_ENC_PATH
+        from .security import decrypt_config
+
+        self.base_url = QtWidgets.QLineEdit()
+        self.email = QtWidgets.QLineEdit()
+        self.api_token = QtWidgets.QLineEdit()
+        self.api_token.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        self.projects = QtWidgets.QLineEdit()
+        self.issue_types = QtWidgets.QLineEdit()
+        self.start_date_field = QtWidgets.QLineEdit()
+        self.done_jql = QtWidgets.QLineEdit()
+
+        form = QtWidgets.QFormLayout()
+        form.addRow("JIRA base URL:", self.base_url)
+        form.addRow("Assignee email:", self.email)
+        form.addRow("JIRA API token:", self.api_token)
+        form.addRow("Project keys (comma-separated):", self.projects)
+        form.addRow("Issue types (comma-separated):", self.issue_types)
+        form.addRow("Start date field:", self.start_date_field)
+        form.addRow("Custom 'closed today' JQL:", self.done_jql)
+
+        btn_ok = QtWidgets.QPushButton("Save")
+        btn_cancel = QtWidgets.QPushButton("Cancel")
+        btn_ok.clicked.connect(self.accept)
+        btn_cancel.clicked.connect(self.reject)
+
+        btns = QtWidgets.QHBoxLayout()
+        btns.addStretch(1)
+        btns.addWidget(btn_cancel)
+        btns.addWidget(btn_ok)
+
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.addLayout(form)
+        outer.addLayout(btns)
+
+        # try to pre-load if encrypted config exists
+        try:
+            if CONFIG_ENC_PATH.exists():
+                data = CONFIG_ENC_PATH.read_bytes()
+                cfg = decrypt_config(data)
+                self.base_url.setText(cfg.get("jira_base_url", ""))
+                self.email.setText(cfg.get("assignee_email", ""))
+                # don't pre-fill api_token for security, leave empty
+                self.projects.setText(", ".join(cfg.get("project_keys", [])))
+                self.issue_types.setText(", ".join(cfg.get("issue_types", [])))
+                self.start_date_field.setText(cfg.get("start_date_field", "customfield_10015"))
+                self.done_jql.setText(cfg.get("done_jql") or "")
+        except Exception:
+            # ignore decryption errors here
+            pass
+
+    def get_values(self) -> dict:
+        return {
+            "jira_base_url": self.base_url.text().strip(),
+            "assignee_email": self.email.text().strip(),
+            "api_token": self.api_token.text().strip() or None,
+            "project_keys": [x.strip() for x in self.projects.text().split(",") if x.strip()],
+            "issue_types": [x.strip() for x in self.issue_types.text().split(",") if x.strip()],
+            "start_date_field": self.start_date_field.text().strip() or "customfield_10015",
+            "done_jql": self.done_jql.text().strip() or None,
+        }
+
+
+class ConfigDialog(QtWidgets.QDialog):
+    """Main configuration dialog. Non-secure settings live in a plain JSON file; secure settings are optional and edited via SecureConfigDialog."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Jira Reminder — Configuration")
+
+        import json
+        from .paths import CONFIG_PLAIN_PATH
+
+        self.chk_logging = QtWidgets.QCheckBox("Enable DEBUG logging")
+        self.chk_new_log = QtWidgets.QCheckBox("Create new log file on start")
+        self.spin_ui = QtWidgets.QDoubleSpinBox()
+        self.spin_ui.setRange(0.5, 3.0)
+        self.spin_ui.setSingleStep(0.05)
+        self.spin_ui.setValue(1.25)
+
+        btn_edit_secure = QtWidgets.QPushButton("Edit secure settings...")
+        btn_edit_secure.clicked.connect(self._open_secure)
+
+        btn_save = QtWidgets.QPushButton("Save")
+        btn_cancel = QtWidgets.QPushButton("Cancel")
+        btn_save.clicked.connect(self._on_save)
+        btn_cancel.clicked.connect(self.reject)
+
+        form = QtWidgets.QFormLayout()
+        form.addRow(self.chk_logging)
+        form.addRow(self.chk_new_log)
+        form.addRow("UI scale:", self.spin_ui)
+        form.addRow(btn_edit_secure)
+
+        btns = QtWidgets.QHBoxLayout()
+        btns.addStretch(1)
+        btns.addWidget(btn_cancel)
+        btns.addWidget(btn_save)
+
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.addLayout(form)
+        outer.addLayout(btns)
+
+        # load plain config if present
+        try:
+            if CONFIG_PLAIN_PATH.exists():
+                data = json.loads(CONFIG_PLAIN_PATH.read_text(encoding="utf-8"))
+                self.chk_logging.setChecked(bool(data.get("logging", False)))
+                self.chk_new_log.setChecked(bool(data.get("new_log", False)))
+                self.spin_ui.setValue(float(data.get("ui_scale", 1.25)))
+        except Exception:
+            pass
+
+    def _open_secure(self):
+        dlg = SecureConfigDialog(self)
+        if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            vals = dlg.get_values()
+            # write encrypted config
+            from .security import encrypt_config
+            from .paths import CONFIG_ENC_PATH
+            try:
+                CONFIG_ENC_PATH.write_bytes(encrypt_config(vals))
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save secure config: {e}")
+
+    def _on_save(self):
+        import json
+        from .paths import CONFIG_PLAIN_PATH
+
+        plain = {
+            "logging": bool(self.chk_logging.isChecked()),
+            "new_log": bool(self.chk_new_log.isChecked()),
+            "ui_scale": float(self.spin_ui.value()),
+        }
+        try:
+            CONFIG_PLAIN_PATH.write_text(json.dumps(plain, ensure_ascii=False, indent=2), encoding="utf-8")
+            # apply UI scale immediately
+            try:
+                # update global UI scale
+                from .metrics import set_ui_scale, UI_SCALE, BLOCK_WIDTH_PX, BLOCK_HEIGHT_PX, GAP_PX, CARD_HEIGHT_PX
+                set_ui_scale(plain["ui_scale"])
+                app = QtWidgets.QApplication.instance()
+                if app:
+                    # update application font
+                    font = app.font()
+                    ps = font.pointSizeF()
+                    if ps <= 0:
+                        ps = 12.0
+                    font.setPointSizeF(max(7.5, ps * UI_SCALE))
+                    app.setFont(font)
+
+                    # Full immediate re-layout: iterate all widgets and update sizes/polish
+                    try:
+                        for w in app.allWidgets():
+                            try:
+                                w.setFont(font)
+                            except Exception:
+                                pass
+
+                            # Adjust known components that use fixed sizes based on metrics
+                            try:
+                                # MainWindow: recompute fixed size
+                                if isinstance(w, MainWindow):
+                                    win_w = BLOCK_WIDTH_PX() * 2 + GAP_PX() * 3
+                                    win_h = BLOCK_HEIGHT_PX() * 2 + GAP_PX() * 3
+                                    w.setFixedSize(win_w, win_h)
+                            except Exception:
+                                pass
+
+                            try:
+                                # IssuesCardList uses fixed width/height
+                                if isinstance(w, IssuesCardList):
+                                    w.setFixedWidth(BLOCK_WIDTH_PX())
+                                    w.setFixedHeight(BLOCK_HEIGHT_PX())
+                                    # update scroll limits
+                                    w.scroll.setMinimumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX())
+                                    w.scroll.setMaximumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX())
+                            except Exception:
+                                pass
+
+                            try:
+                                # IssueCard: adjust fixed height
+                                if isinstance(w, IssueCard):
+                                    w.setFixedHeight(CARD_HEIGHT_PX())
+                            except Exception:
+                                pass
+
+                            # trigger style polish and geometry updates
+                            try:
+                                w.style().unpolish(w)
+                                w.style().polish(w)
+                                w.updateGeometry()
+                                w.update()
+                            except Exception:
+                                pass
+                    except Exception:
+                        # be resilient: don't fail saving on re-layout errors
+                        pass
+            except Exception:
+                # don't block saving on UI-scale application errors
+                pass
+
+            self.accept()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save config: {e}")
+
+    @staticmethod
+    def load_combined() -> dict:
+        """Return combined configuration dict by reading encrypted config (if present) and overlaying plain settings."""
+        import json
+        from .paths import CONFIG_PLAIN_PATH, CONFIG_ENC_PATH
+        from .security import decrypt_config
+
+        plain = {}
+        try:
+            if CONFIG_PLAIN_PATH.exists():
+                plain = json.loads(CONFIG_PLAIN_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            plain = {}
+
+        secure = {}
+        try:
+            if CONFIG_ENC_PATH.exists():
+                secure = decrypt_config(CONFIG_ENC_PATH.read_bytes())
+        except Exception:
+            secure = {}
+
+        # combine: secure keys take precedence for JIRA-related fields
+        res = {**plain, **secure}
+        return res

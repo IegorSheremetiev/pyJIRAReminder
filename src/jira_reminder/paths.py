@@ -54,3 +54,4 @@ def app_dir() -> pathlib.Path:
 CONFIG_ENC_PATH = app_dir() / "config.enc"
 LOG_PATH = app_dir() / "jira_reminder.log"
 LOCK_PATH = str(app_dir() / "app.lock")
+CONFIG_PLAIN_PATH = app_dir() / "config.json"
