@@ -10,7 +10,8 @@ from .metrics import APP_NAME
 from .logging_setup import log
 from .paths import asset_path
 from .jira_client import JiraClient
-from .ui import MainWindow, TodayPopup
+from .ui import MainWindow, TodayPopup, ConfigDialog
+from .logging_setup import setup_logging
 
 
 class JiraReminderController(QtCore.QObject):
@@ -27,6 +28,8 @@ class JiraReminderController(QtCore.QObject):
         menu = QtWidgets.QMenu()
         act_open = menu.addAction("Open")
         act_open.triggered.connect(self.show_main)
+        act_config = menu.addAction("Config...")
+        act_config.triggered.connect(self._open_config)
         act_refresh = menu.addAction("Refresh")
         act_refresh.triggered.connect(self.refresh_all)
         menu.addSeparator()
@@ -238,3 +241,23 @@ class JiraReminderController(QtCore.QObject):
             if self._click_timer.isActive():
                 self._click_timer.stop()
             self.show_main()
+
+    def _open_config(self):
+        try:
+            dlg = ConfigDialog(self.window)
+            if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+                # reload plain settings and apply immediate logging change
+                import json
+                from .paths import CONFIG_PLAIN_PATH
+
+                plain = {}
+                try:
+                    if CONFIG_PLAIN_PATH.exists():
+                        plain = json.loads(CONFIG_PLAIN_PATH.read_text(encoding="utf-8"))
+                except Exception:
+                    plain = {}
+
+                setup_logging(bool(plain.get("logging", False)), bool(plain.get("new_log", False)))
+                QtWidgets.QMessageBox.information(self.window, APP_NAME, "Configuration saved.")
+        except Exception:
+            log.exception("_open_config failed")
