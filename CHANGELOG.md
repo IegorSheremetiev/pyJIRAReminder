@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.9](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.8...v0.9.9) (2025-11-13)
+
+
+### Bug Fixes
+
+* 22 pop up windows do not appear for reminding unclosed sub tasks per day ([#26](https://github.com/IegorSheremetiev/pyJIRAReminder/issues/26)) ([4798191](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/4798191ee6329e8df7ef812db0810d214458a8fa))
+
 ## [0.9.8](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.7...v0.9.8) (2025-11-10)
 
 

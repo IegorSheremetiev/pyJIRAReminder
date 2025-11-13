@@ -1,6 +1,6 @@
 [project]
 name = "pyJIRAReminder"
-version = "0.9.8"  # x-release-please-version
+version = "0.9.9"  # x-release-please-version
 description = "A simple desktop application to remind you of your Jira tasks."
 authors = [
     { name = "Yegor Sheremetiev", email = "iegor.sheremetiev@visteon.com" }
