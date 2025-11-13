@@ -396,6 +396,8 @@ class SecureConfigDialog(QtWidgets.QDialog):
         self.email = QtWidgets.QLineEdit()
         self.api_token = QtWidgets.QLineEdit()
         self.api_token.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        # Hint for the user: leaving this blank will keep the existing token
+        self.api_token.setPlaceholderText("(leave blank to keep current token)")
         self.projects = QtWidgets.QLineEdit()
         self.issue_types = QtWidgets.QLineEdit()
         self.start_date_field = QtWidgets.QLineEdit()
@@ -441,10 +443,24 @@ class SecureConfigDialog(QtWidgets.QDialog):
             pass
 
     def get_values(self) -> dict:
+        # Preserve existing API token if the field is left blank.
+        api_token_val = self.api_token.text().strip()
+        if not api_token_val:
+            try:
+                from .paths import CONFIG_ENC_PATH
+                from .security import decrypt_config
+
+                if CONFIG_ENC_PATH.exists():
+                    existing = decrypt_config(CONFIG_ENC_PATH.read_bytes()) or {}
+                    api_token_val = existing.get("api_token")
+            except Exception:
+                # If anything goes wrong reading/decrypting, leave as None
+                api_token_val = None
+
         return {
             "jira_base_url": self.base_url.text().strip(),
             "assignee_email": self.email.text().strip(),
-            "api_token": self.api_token.text().strip() or None,
+            "api_token": api_token_val or None,
             "project_keys": [x.strip() for x in self.projects.text().split(",") if x.strip()],
             "issue_types": [x.strip() for x in self.issue_types.text().split(",") if x.strip()],
             "start_date_field": self.start_date_field.text().strip() or "customfield_10015",
