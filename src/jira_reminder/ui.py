@@ -236,8 +236,9 @@ class IssuesCardList(QtWidgets.QWidget):
 
         self.setFixedWidth(BLOCK_WIDTH_PX())
         self.setFixedHeight(BLOCK_HEIGHT_PX())
-        self.scroll.setMinimumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX())
-        self.scroll.setMaximumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX())
+        # ensure two full cards are visible; add small padding to account for card margins/shadows
+        self.scroll.setMinimumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX() + S(12))
+        self.scroll.setMaximumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX() + S(12))
 
         self._more_url = None
         self._url_builder = None
@@ -588,8 +589,8 @@ class ConfigDialog(QtWidgets.QDialog):
                                     w.setFixedWidth(BLOCK_WIDTH_PX())
                                     w.setFixedHeight(BLOCK_HEIGHT_PX())
                                     # update scroll limits
-                                    w.scroll.setMinimumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX())
-                                    w.scroll.setMaximumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX())
+                                    w.scroll.setMinimumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX() + S(12))
+                                    w.scroll.setMaximumHeight(CARD_HEIGHT_PX() * 2 + GAP_PX() + S(12))
                             except Exception:
                                 pass
 
