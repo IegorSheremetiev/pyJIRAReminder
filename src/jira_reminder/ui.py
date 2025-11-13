@@ -102,6 +102,8 @@ class IssueCard(QtWidgets.QFrame):
             QtWidgets.QSizePolicy.Policy.Expanding,
             QtWidgets.QSizePolicy.Policy.Preferred,
         )
+        # ensure multi-line text is top-aligned inside its layout cell
+        summary.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
 
         due = issue.get("duedate")
         due_lbl = QtWidgets.QLabel(self._due_text(due))
@@ -540,20 +542,25 @@ class ConfigDialog(QtWidgets.QDialog):
             CONFIG_PLAIN_PATH.write_text(json.dumps(plain, ensure_ascii=False, indent=2), encoding="utf-8")
             # apply UI scale immediately
             try:
-                # update global UI scale
-                from .metrics import set_ui_scale, UI_SCALE, BLOCK_WIDTH_PX, BLOCK_HEIGHT_PX, GAP_PX, CARD_HEIGHT_PX
-                set_ui_scale(plain["ui_scale"])
+                # update global UI scale: compute a stable BASE_FONT_SIZE from current font and previous UI_SCALE
+                from .metrics import set_ui_scale, UI_SCALE as _old_ui_scale, set_base_font_size, BLOCK_WIDTH_PX, BLOCK_HEIGHT_PX, GAP_PX, CARD_HEIGHT_PX
                 app = QtWidgets.QApplication.instance()
                 if app:
-                    # update application font
+                    # measure current application font size and infer unscaled base
                     font = app.font()
-                    # use stored base font size (unscaled) to compute scaled size
+                    curr_ps = font.pointSizeF() or 12.0
                     try:
-                        from .metrics import BASE_FONT_SIZE
-                        base = float(BASE_FONT_SIZE)
+                        old_scale = float(_old_ui_scale) if _old_ui_scale and float(_old_ui_scale) > 0 else 1.0
                     except Exception:
-                        base = font.pointSizeF() or 12.0
+                        old_scale = 1.0
 
+                    base = curr_ps / old_scale if old_scale else curr_ps
+                    # store base and then set new scale
+                    set_base_font_size(base)
+                    set_ui_scale(plain["ui_scale"])
+
+                    # apply scaled font based on stable base
+                    from .metrics import UI_SCALE
                     font.setPointSizeF(max(7.5, base * UI_SCALE))
                     app.setFont(font)
 
