@@ -7,6 +7,7 @@ __version__ = "0.9.9"  # x-release-please-version
 # --- UI scaling & metrics ---
 
 UI_SCALE: float = 1.0  # буде оновлено в app.main() згідно з аргументом --ui-scale
+BASE_FONT_SIZE: float = 12.0  # application base font point size (unscaled)
 
 
 def set_ui_scale(value: float) -> None:
@@ -15,6 +16,15 @@ def set_ui_scale(value: float) -> None:
     """
     global UI_SCALE
     UI_SCALE = max(0.75, min(2.5, float(value)))
+
+
+def set_base_font_size(value: float) -> None:
+    """Set the unscaled base font point size. Use this to compute scaled sizes deterministically."""
+    global BASE_FONT_SIZE
+    try:
+        BASE_FONT_SIZE = float(value)
+    except Exception:
+        BASE_FONT_SIZE = 12.0
 
 
 def S(px: float) -> int:

@@ -522,10 +522,19 @@ class ConfigDialog(QtWidgets.QDialog):
         import json
         from .paths import CONFIG_PLAIN_PATH
 
+        # quantize ui_scale to nearest 0.05 and store with 2 decimals
+        raw_scale = float(self.spin_ui.value())
+        quant = round(round(raw_scale / 0.05) * 0.05, 2)
+        # keep spin box consistent with quantized value
+        try:
+            self.spin_ui.setValue(quant)
+        except Exception:
+            pass
+
         plain = {
             "logging": bool(self.chk_logging.isChecked()),
             "new_log": bool(self.chk_new_log.isChecked()),
-            "ui_scale": float(self.spin_ui.value()),
+            "ui_scale": quant,
         }
         try:
             CONFIG_PLAIN_PATH.write_text(json.dumps(plain, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -538,10 +547,14 @@ class ConfigDialog(QtWidgets.QDialog):
                 if app:
                     # update application font
                     font = app.font()
-                    ps = font.pointSizeF()
-                    if ps <= 0:
-                        ps = 12.0
-                    font.setPointSizeF(max(7.5, ps * UI_SCALE))
+                    # use stored base font size (unscaled) to compute scaled size
+                    try:
+                        from .metrics import BASE_FONT_SIZE
+                        base = float(BASE_FONT_SIZE)
+                    except Exception:
+                        base = font.pointSizeF() or 12.0
+
+                    font.setPointSizeF(max(7.5, base * UI_SCALE))
                     app.setFont(font)
 
                     # Full immediate re-layout: iterate all widgets and update sizes/polish
