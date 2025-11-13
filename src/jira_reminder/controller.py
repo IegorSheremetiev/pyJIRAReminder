@@ -102,7 +102,6 @@ class JiraReminderController(QtCore.QObject):
 
     def _on_tick_at(self, now: datetime):
         log.debug("Tick at %s", now.strftime("%H:%M:%S"))
-        log.debug("Tick at %s", now.strftime("%H:%M:%S"))
         if now.hour == 10 and now.minute in (0, 1):
             log.debug("10:00 check triggered")
             self.check_today_and_notify()
