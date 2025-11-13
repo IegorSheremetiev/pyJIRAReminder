@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.10.0](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.9...v0.10.0) (2025-11-13)
+
+
+### Features
+
+* **config:** Full GUI added for configuration ([42f2fc0](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/42f2fc0cbe5839d2d6ad9f615202c7a81377ed3d))
+
+
+### Bug Fixes
+
+* **config:** applied scaling to the font and text alignment at top ([4eecd86](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/4eecd86e48dbe14adc9f3e05aecaef5a9808ce8f))
+* **config:** fixed float value save option and limited to the precisio 0.05 ([2d6c9e3](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/2d6c9e384ec0c3e8cb88821445b2cbbe0e87c5dc))
+* **config:** fixed scaling use where the scale is not appied correctlyl ([8977537](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/897753746528e8268591d5f8211172a4b053ca3d))
+* **gui:** layout fix to ensure show of 2 issueCards ([9c23994](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/9c23994edc1abbcf73039fdea27950b5db6ef343))
+* **log:** remove double logging of the 'tick at' statement ([e71c438](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/e71c438e1a61f7dbef1bbdc72ac2a23b2dfc2f66))
+* **secure:** Avoid wiping stored API token when saving other secure settings ([3096038](https://github.com/IegorSheremetiev/pyJIRAReminder/commit/3096038fac359ead7998648e826c6f2945b8ff09))
+
 ## [0.9.9](https://github.com/IegorSheremetiev/pyJIRAReminder/compare/v0.9.8...v0.9.9) (2025-11-13)
 
 
