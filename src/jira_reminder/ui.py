@@ -464,6 +464,8 @@ class ConfigDialog(QtWidgets.QDialog):
         self.spin_ui = QtWidgets.QDoubleSpinBox()
         self.spin_ui.setRange(0.5, 3.0)
         self.spin_ui.setSingleStep(0.05)
+        # show only two decimals and step of 0.05
+        self.spin_ui.setDecimals(2)
         self.spin_ui.setValue(1.25)
 
         btn_edit_secure = QtWidgets.QPushButton("Edit secure settings...")
@@ -495,7 +497,12 @@ class ConfigDialog(QtWidgets.QDialog):
                 data = json.loads(CONFIG_PLAIN_PATH.read_text(encoding="utf-8"))
                 self.chk_logging.setChecked(bool(data.get("logging", False)))
                 self.chk_new_log.setChecked(bool(data.get("new_log", False)))
-                self.spin_ui.setValue(float(data.get("ui_scale", 1.25)))
+                # keep only two decimals when loading
+                try:
+                    val = round(float(data.get("ui_scale", 1.25)), 2)
+                except Exception:
+                    val = 1.25
+                self.spin_ui.setValue(val)
         except Exception:
             pass
 
