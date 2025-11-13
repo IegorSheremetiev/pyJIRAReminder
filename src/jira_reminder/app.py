@@ -74,8 +74,10 @@ def main(argv: list[str] | None = None) -> int:
     ps = font.pointSizeF()
     if ps <= 0:
         ps = 12.0
-    from .metrics import UI_SCALE  # читаємо актуальний масштаб
-    font.setPointSizeF(max(7.5, ps * UI_SCALE))
+    from .metrics import UI_SCALE, set_base_font_size, BASE_FONT_SIZE  # читаємо актуальний масштаб
+    # store unscaled base font size and apply scaling deterministically
+    set_base_font_size(ps)
+    font.setPointSizeF(max(7.5, BASE_FONT_SIZE * UI_SCALE))
     app.setFont(font)
     app.setQuitOnLastWindowClosed(False)
     log.debug("QApplication initialized with UI scale %.2fx", UI_SCALE)
