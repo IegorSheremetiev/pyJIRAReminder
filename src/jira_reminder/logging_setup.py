@@ -6,7 +6,7 @@ import logging
 
 from .paths import LOG_PATH
 
-log = logging.getLogger("jira_reminder")
+log = logging.getLogger("JiraReminder")
 
 
 def setup_logging(enabled: bool, new_log: bool) -> None:
