@@ -114,12 +114,6 @@ class JiraReminderController(QtCore.QObject):
                       seconds_passed)
             
             if (self._last_close_check is None) or (seconds_passed >= self.__undone_check_period):
-            seconds_passed = (int((now - self._last_close_check).total_seconds()) + 1) if self._last_close_check else float('inf')
-            log.debug("Evening check time window: now %s, last check %s, seconds passed %s", now.strftime("%H:%M:%S"), 
-                      self._last_close_check.strftime("%H:%M:%S") if self._last_close_check else "None", 
-                      seconds_passed)
-            
-            if (self._last_close_check is None) or (seconds_passed >= self.__undone_check_period):
                 self._last_close_check = now
                 has = self._has_closed_today()
                 log.debug("Evening check: has_closed_today=%s", has)
