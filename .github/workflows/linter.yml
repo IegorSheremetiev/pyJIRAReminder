@@ -1,11 +1,56 @@
-name: Semantic Pull request Linter
-on: 
-    pull_request_target:
-        types: [opened, edited, reopened, synchronize]
+name: Auto Assign Me
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            -  uses: amannn/action-semantic-pull-request@v5
-               env:
-                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign me (and request review when needed)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Optional: skip noisy bots entirely for review requests / author-assign (Dependabot etc.)
+            const isBot = context.actor.endsWith('[bot]');
+
+            const maintainer = context.repo.owner;   // <- your GitHub username if personal repo
+                                                     // <- if this is an org repo, replace with your actual login, e.g. "your-username"
+
+            let assignees = [maintainer];
+
+            if (context.eventName === 'pull_request_target') {
+              const pr = context.payload.pull_request;
+              const isFromFork = pr.head.repo.fork === true;
+
+              // Only assign the author if the PR is from the same repository AND not a bot
+              if (!isFromFork && !isBot) {
+                assignees = [context.actor];
+              }
+              // otherwise we fall back to assigning the maintainer (always safe)
+            }
+            // else for issues we always assign the maintainer
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees   // ← always an array now
+            });
+
+            // Request review from you only on non-bot contributor PRs
+            if (context.eventName === 'pull_request_target' && !isBot && context.actor !== maintainer) {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                reviewers: [maintainer]
+              });
+            }
