@@ -31,8 +31,13 @@ A lightweight system-tray app for Windows (primary) and Linux (secondary) that s
   - [License](#license)
   - [Testing](#testing)
   - [Project structure](#project-structure)
+  - [Changelog](#changelog)
 
 ---
+
+## Changelog
+
+Please see the [full changelog](CHANGELOG.md) for a detailed history of changes.
 
 ## Features
 
@@ -289,15 +294,36 @@ MIT (see `LICENSE`).
 
 ## Testing
 
-- Controller notification behavior tests (uses a lightweight fake tray and fake client):
+### Unit tests
+
+The project includes unit tests for core functionality:
+
+- `test_app.py`: Tests the main application entry point
+- `test_controller_notifications.py`: Tests the notification system
+
+### Running tests
 
 ```bash
-python scripts/test_controller_notifications.py
+# Install test dependencies
+pip install -r requirements.txt pytest
+
+# Run tests
+pytest scripts/test_*.py -v
 ```
 
-Notes:
-- Requires `PyQt6` installed.
-- On Linux headless environments, use `xvfb-run -a python scripts/test_controller_notifications.py`.
+### Test coverage
+
+```bash
+pytest --cov=src --cov-report=html
+```
+
+### Continuous integration
+
+The GitHub Actions workflow includes:
+
+- Automatic test execution on every commit
+- Coverage reporting
+- Code style checking
 
 ---
 
