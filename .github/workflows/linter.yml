@@ -1,11 +1,48 @@
-name: Semantic Pull request Linter
-on: 
-    pull_request_target:
-        types: [opened, edited, reopened, synchronize]
+name: Auto Assign Maintainer & Request Review
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write   # Needed for addAssignees (issues endpoint) + requestReviewers
+
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            -  uses: amannn/action-semantic-pull-request@v5
-               env:
-                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  assign:
+    name: Assign maintainer / author + auto-request review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign and request review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Skip bots (Dependabot, GitHub Actions, Renovate, etc.)
+            if (context.actor.endsWith('[bot]') || context.actor === 'dependabot-preview[bot]') {
+              console.log(`Skipping bot user ${context.actor}`)
+              return
+            }
+
+            const isIssue = context.eventName === 'issues'
+            const maintainer = context.repo.owner
+            let assignees = isIssue ? maintainer : context.actor
+
+            // Assign
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees: assignees   // string or array, both accepted
+            })
+
+            // For PRs only: auto-request review from maintainer if contributor opened it
+            if (!isIssue && context.actor !== maintainer) {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                reviewers: [maintainer]
+              })
+            }
