@@ -11,20 +11,26 @@ A lightweight system-tray app for Windows (primary) and Linux (secondary) that s
 ---
 
 ## Table of contents
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [Configuration](#configuration)
-- [JQL logic](#jql-logic)
-- [Tray controls & UI](#tray-controls--ui)
-- [Logging & troubleshooting](#logging--troubleshooting)
-- [Build (local)](#build-local)
-- [Build (GitHub Actions)](#build-github-actions)
-- [Security model](#security-model)
-- [Testing](#testing)
-- [FAQ](#faq)
-- [License](#license)
+- [Jira Reminder (PyQt6)](#jira-reminder-pyqt6)
+  - [Table of contents](#table-of-contents)
+  - [Features](#features)
+  - [Screenshots](#screenshots)
+  - [Install](#install)
+    - [Requirements](#requirements)
+    - [Setup](#setup)
+  - [Quick start](#quick-start)
+  - [Configuration](#configuration)
+    - [What is stored (encrypted)](#what-is-stored-encrypted)
+  - [JQL logic](#jql-logic)
+  - [Tray controls \& UI](#tray-controls--ui)
+  - [Logging \& troubleshooting](#logging--troubleshooting)
+  - [Build (local)](#build-local)
+  - [Build (GitHub Actions)](#build-github-actions)
+  - [Security model](#security-model)
+  - [FAQ](#faq)
+  - [License](#license)
+  - [Testing](#testing)
+  - [Project structure](#project-structure)
 
 ---
 
@@ -297,7 +303,7 @@ Notes:
 
 ## Project structure
 
-```
+```plaintext
 src/jira_reminder/
   app.py            # CLI and Qt application bootstrap
   controller.py     # Tray icon, timers, notifications, data refreshes
@@ -315,10 +321,4 @@ scripts/            # Tests and helpers (e.g., controller notification tests)
 os_scripts/         # Local build helper scripts (.ps1 / .sh)
 JiraReminder.spec   # PyInstaller spec file
 ```
-
-Notes:
-- Run via `pyJIRAReminder.py` or `python -m jira_reminder.app`.
-- After installing the package (`pip install .`), you can run the app with the `jira-reminder` command.
-- The package exposes `JiraClient` and `JiraReminderController` for tests/imports.
-- An hourly background refresh timer complements the manual Refresh button.
 
